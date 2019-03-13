@@ -25,7 +25,7 @@ miner.addAddress('muhtvdmsnbQEPFuEmxcChX58fGvXaaUoVt');
 describe('HeaderIndexer', () => {
   let indexer, options;
 
-  beforeEach(async () => {
+  before(async () => {
     options = { memory: true, chain };
     indexer = new HeaderIndexer(options);
 
@@ -34,7 +34,7 @@ describe('HeaderIndexer', () => {
     await indexer.open();
   });
 
-  afterEach(async () => {
+  after(async () => {
     await indexer.close();
     await chain.close();
     await miner.close();

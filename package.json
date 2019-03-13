@@ -1,5 +1,5 @@
 {
-  "name": "headers-node",
+  "name": "headernode",
   "version": "0.0.1",
   "description": "A lightweight node for syncing only bitcoin block headers from a specific height",
   "main": "lib/index.js",
