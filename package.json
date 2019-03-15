@@ -8,6 +8,9 @@
   },
   "author": "bucko",
   "license": "MIT",
+  "bin": {
+    "headernode": "./bin/headernode"
+  },
   "dependencies": {
     "bcoin": "bucko13/bcoin#expose-filter",
     "bdb": "^1.1.5",
