@@ -142,26 +142,29 @@ mined on the network', async () => {
   it('should start syncing from last tip when restarted', async () => {
     let headerTip;
     const count = 10;
-    await headerNode.close();
+    await headerNode.disconnect();
 
     // mine some blocks while header node is offline
     await generateBlocks(count, nclient, coinbase);
     await sleep(500);
 
-    // restart header node
-    await headerNode.open();
-    await headerNode.connect();
-
-    const tip = await nclient.execute('getblockcount');
+    let tip = await nclient.execute('getblockcount');
     headerTip = await headerNode.getTip();
-
     assert.equal(
       tip - count,
       headerTip.height,
       'Headers tip before sync should same as before blocks were mined'
     );
 
+    // we're going to clear the chaindb from memory in case it hasn't been GCed
+    await headerNode.chain.db.reset(0);
+    await headerNode.close();
+    await headerNode.open();
+    await headerNode.connect();
     await headerNode.startSync();
+    // await headerNode.setChainTip();
+    // await headerNode.connect();
+    // await headerNode.resync();
 
     await sleep(500);
 
@@ -169,11 +172,28 @@ mined on the network', async () => {
     const header = await headerNode.getHeader(headerTip.height);
 
     assert.equal(
-      tip,
       headerTip.height,
+      tip,
       'Expected chain tip and header tip to be the same'
     );
     assert(header, 'Expected to get a header for the latest tip after restart');
+
+    // now check subscriptions are still working for new blocks
+    await generateBlocks(count, nclient, coinbase);
+    await sleep(500);
+    tip = await nclient.execute('getblockcount');
+
+    headerTip = await headerNode.getTip();
+
+    assert.equal(
+      tip,
+      headerTip.height,
+      'Expected chain tip and header tip to be the same after new blocks mined'
+    );
+    assert(
+      header,
+      'Expected to get a header for the latest tip after blocks mined'
+    );
   });
 
   // TODO

@@ -383,7 +383,7 @@ buffer-map@~0.0.5:
   resolved "https://registry.yarnpkg.com/buffer-map/-/buffer-map-0.0.6.tgz#b4e204f4c828d1c5a87885d2a6abcc87b0bbb5bb"
   integrity sha512-5pspGR466fgk/yjNJaqp/Z2BBJ66H2P5ty0+T5D0wwT7SiBkOFZedceu6LAm3UPFAdX0izdVJ4jXjtr7c+18zQ==
 
-bufio@~1.0.4:
+bufio@^1.0.5, bufio@~1.0.4:
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/bufio/-/bufio-1.0.5.tgz#4d397b855cc5aa595e2a3a86014edb965b5f93d8"
   integrity sha512-oS+gSA1CypnrTwesocIx/O4Gb/2TwME1yLN/qUEp2oJfkbRABBDuKlTsQkVPz0cMzM1T0Oq73jBqfwoSG0Xr7A==
