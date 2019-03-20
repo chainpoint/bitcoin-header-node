@@ -4,7 +4,6 @@
 
 process.title = 'bcoin';
 
-const assert = require('bsert');
 const HeaderNode = require('../lib/headernode');
 
 const node = new HeaderNode({

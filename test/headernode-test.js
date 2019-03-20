@@ -1,7 +1,7 @@
 'use strict';
 const assert = require('bsert');
 
-const { protocol, Headers } = require('bcoin');
+const { Network } = require('bcoin');
 
 const HeaderNode = require('../lib/headernode');
 const { rimraf, sleep } = require('./util/common');
@@ -15,7 +15,6 @@ const {
   // generateReorg,
 } = require('./util/regtest');
 
-const { Network } = protocol;
 const network = Network.get('regtest');
 
 const testPrefix = '/tmp/bcoin-fullnode';
@@ -37,9 +36,9 @@ const ports = {
 
 describe('HeaderNode', function() {
   this.timeout(30000);
-  let node,
-    headerNode,
-    wallet = null;
+  let node = null;
+  let headerNode = null;
+  let wallet = null;
   let nclient,
     wclient = null;
   let coinbase,
@@ -54,7 +53,7 @@ describe('HeaderNode', function() {
     node = await initFullNode({
       ports,
       prefix: testPrefix,
-      logLevel: 'none',
+      logLevel: 'error',
     });
 
     headerNode = new HeaderNode({
@@ -62,7 +61,7 @@ describe('HeaderNode', function() {
       network: network.type,
       port: ports.header.p2p,
       httpPort: ports.header.node,
-      logLevel: 'none',
+      logLevel: 'error',
       nodes: [`127.0.0.1:${ports.full.p2p}`],
       memory: false,
       workers: true,
@@ -82,7 +81,7 @@ describe('HeaderNode', function() {
       genesisTime,
       blocks: initHeight,
     });
-
+    await headerNode.ensure();
     await headerNode.open();
     await headerNode.connect();
     await headerNode.startSync();
@@ -94,9 +93,16 @@ describe('HeaderNode', function() {
     await wclient.close();
     await nclient.close();
     await node.close();
-    await headerNode.close();
+    if (headerNode.opened)
+      await headerNode.close();
     await rimraf(testPrefix);
     await rimraf(headerTestPrefix);
+
+    // clear checkpoint information on bcoin module
+    if (node.network.lastCheckpoint) {
+      node.network.checkpointMap = {};
+      node.network.lastCheckpoint = 0;
+    }
   });
 
   it('should create a new HeaderNode', async () => {
@@ -109,12 +115,11 @@ describe('HeaderNode', function() {
       if (i === 0) continue;
 
       const entry = await node.chain.getEntry(i);
-      let header = await headerNode.getHeader(i);
+      const header = await headerNode.getHeader(i);
 
-      if (header) header = Headers.fromRaw(header);
-      else throw new Error(`No header in the index for block ${i}`);
+      if (!header) throw new Error(`No header in the index for block ${i}`);
 
-      assert.equal(entry.hash.toString('hex'), header.hash().toString('hex'));
+      assert.equal(entry.hash.toString('hex'), header.hash.toString('hex'));
     }
   });
 
@@ -150,21 +155,21 @@ mined on the network', async () => {
 
     let tip = await nclient.execute('getblockcount');
     headerTip = await headerNode.getTip();
+
     assert.equal(
       tip - count,
       headerTip.height,
       'Headers tip before sync should same as before blocks were mined'
     );
 
-    // we're going to clear the chaindb from memory in case it hasn't been GCed
+    // reset the chain in case in-memory chain not picked up by GC
     await headerNode.chain.db.reset(0);
+
+    // restart headerNode to confirm that it will catch up
     await headerNode.close();
     await headerNode.open();
     await headerNode.connect();
     await headerNode.startSync();
-    // await headerNode.setChainTip();
-    // await headerNode.connect();
-    // await headerNode.resync();
 
     await sleep(500);
 
@@ -190,9 +195,62 @@ mined on the network', async () => {
       headerTip.height,
       'Expected chain tip and header tip to be the same after new blocks mined'
     );
+
     assert(
       header,
       'Expected to get a header for the latest tip after blocks mined'
+    );
+  });
+
+  it('should support checkpoints', async () => {
+    // header index needs to maintain chain from the last checkpoint
+    // this test will set a checkpoint for our regtest network
+    // reset the headernode chain similar to the previous test
+    // and then confirm that only the non-historical blocks were
+    // restored on the chain
+
+    const checkpoint = await headerNode.getTip();
+    const count = 10;
+
+    // mine a block on top of the checkpoint
+    await generateBlocks(1, nclient, coinbase);
+    await sleep(500);
+
+    await headerNode.disconnect();
+
+    // mine some blocks while header node is offline
+    await generateBlocks(count, nclient, coinbase);
+    await sleep(500);
+
+    // set checkpoint
+    headerNode.network.checkpointMap = { [checkpoint.height]: checkpoint.hash };
+    headerNode.network.lastCheckpoint = checkpoint.height;
+
+    // reset chain to 0 again
+    await headerNode.chain.db.reset(0);
+    await headerNode.close();
+    await headerNode.open();
+    await headerNode.connect();
+    await headerNode.startSync();
+
+    // let indexer catch up
+    await sleep(500);
+
+    const historicalEntry = await headerNode.chain.getEntryByHeight(
+      checkpoint.height - 2
+    );
+
+    const checkpointEntry = await headerNode.chain.getEntryByHeight(
+      checkpoint.height + 1
+    );
+
+    assert(
+      !historicalEntry,
+      'Expected there to be no entry for height earlier than checkpoint'
+    );
+    assert(
+      checkpointEntry,
+      'Expected there to be an entry for height after checkpoint'
     );
   });
 

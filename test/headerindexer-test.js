@@ -57,7 +57,7 @@ describe('HeaderIndexer', () => {
     for (let i = 0; i < count; i++) {
       if (i !== 0) {
         let header = await indexer.getHeaderByHeight(i);
-        header = Headers.fromRaw(header);
+        header = Headers.fromRaw(header.toRaw());
         if (prevBlock)
           assert.equal(prevBlock, header.prevBlock.toString('hex'));
         prevBlock = header.hash().toString('hex');
