@@ -3,6 +3,7 @@
 const assert = require('bsert');
 const { Chain, protocol, Miner, Headers } = require('bcoin');
 
+const { sleep } = require('./util/common');
 const HeaderIndexer = require('../lib/headerindexer');
 
 const { Network } = protocol;
@@ -32,6 +33,9 @@ describe('HeaderIndexer', () => {
     await chain.open();
     await miner.open();
     await indexer.open();
+    // need to let the indexer get setup
+    // otherwise close happens too early
+    await sleep(500);
   });
 
   after(async () => {
