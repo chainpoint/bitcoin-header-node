@@ -53,7 +53,7 @@ when `chain`'s locator returns null).
 - [ ] Add HTTP and RPC support for retrieving headers with a bcoin compatible client
 - [ ] Add support to start syncing from a _known_ and _trusted_ header checkpoint (this should speed up
 initial sync and reduce db size further)
-- [ ] Try and get rid of the locator error in `net`
+- [ ] Try and get rid of the locator error in `net` (can be fixed if `getLocator` returns array of just start hash)
 - [ ] Investigate other performance improvements such as [compressed headers](https://github.com/RCasatta/compressedheaders)
 
 ## License
