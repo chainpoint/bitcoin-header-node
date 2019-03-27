@@ -1,7 +1,7 @@
 'use strict';
 const assert = require('bsert');
 
-const { Network } = require('bcoin');
+const { Network, ChainEntry } = require('bcoin');
 
 const HeaderNode = require('../lib/headernode');
 const { rimraf, sleep } = require('./util/common');
@@ -38,10 +38,12 @@ describe('HeaderNode', function() {
   this.timeout(30000);
   let node = null;
   let headerNode = null;
+  let fastNode = null;
   let wallet = null;
   let nclient,
     wclient = null;
   let coinbase,
+    headerNodeOptions,
     initHeight = null;
 
   before(async () => {
@@ -56,7 +58,7 @@ describe('HeaderNode', function() {
       logLevel: 'error',
     });
 
-    headerNode = new HeaderNode({
+    headerNodeOptions = {
       prefix: headerTestPrefix,
       network: network.type,
       port: ports.header.p2p,
@@ -65,7 +67,8 @@ describe('HeaderNode', function() {
       nodes: [`127.0.0.1:${ports.full.p2p}`],
       memory: false,
       workers: true,
-    });
+    };
+    headerNode = new HeaderNode(headerNodeOptions);
 
     nclient = await initNodeClient({ ports: ports.full });
     wclient = await initWalletClient({ ports: ports.full });
@@ -93,8 +96,7 @@ describe('HeaderNode', function() {
     await wclient.close();
     await nclient.close();
     await node.close();
-    if (headerNode.opened)
-      await headerNode.close();
+    await headerNode.close();
     await rimraf(testPrefix);
     await rimraf(headerTestPrefix);
 
@@ -103,6 +105,8 @@ describe('HeaderNode', function() {
       node.network.checkpointMap = {};
       node.network.lastCheckpoint = 0;
     }
+
+    if (fastNode && fastNode.opened) await fastNode.close();
   });
 
   it('should create a new HeaderNode', async () => {
@@ -163,15 +167,7 @@ mined on the network', async () => {
     );
 
     // reset the chain in case in-memory chain not picked up by GC
-    await headerNode.chain.db.reset(0);
-
-    // restart headerNode to confirm that it will catch up
-    await headerNode.close();
-    await headerNode.open();
-    await headerNode.connect();
-    await headerNode.startSync();
-
-    await sleep(500);
+    await resetChain(headerNode);
 
     headerTip = await headerNode.getTip();
     const header = await headerNode.getHeader(headerTip.height);
@@ -226,15 +222,8 @@ mined on the network', async () => {
     headerNode.network.checkpointMap = { [checkpoint.height]: checkpoint.hash };
     headerNode.network.lastCheckpoint = checkpoint.height;
 
-    // reset chain to 0 again
-    await headerNode.chain.db.reset(0);
-    await headerNode.close();
-    await headerNode.open();
-    await headerNode.connect();
-    await headerNode.startSync();
-
-    // let indexer catch up
-    await sleep(500);
+    // resetting chain db to clear from memory
+    await resetChain(headerNode);
 
     const historicalEntry = await headerNode.chain.getEntryByHeight(
       checkpoint.height - 2
@@ -254,8 +243,82 @@ mined on the network', async () => {
     );
   });
 
-  // TODO
-  xit('should handle a reorg', () => {});
+  it.only('should support fast sync with custom starting header', async () => {
+    // need to reset checkpoints otherwise causes issues for creating a new node
+    if (node.network.lastCheckpoint) {
+      node.network.checkpointMap = {};
+      node.network.lastCheckpoint = 0;
+    }
 
-  xit('should support syncing from a custom height', () => {});
+    // arbitrary block to start our new node's chain from
+    // creating a tip with two blocks (prev and tip)
+    const startHeight = 50;
+    const startTip = [];
+    let entry = await node.chain.getEntryByHeight(startHeight);
+    startTip.push(entry.toRaw('hex'));
+    entry = await node.chain.getEntryByHeight(startHeight + 1);
+    startTip.push(entry.toRaw('hex'));
+
+    const options = {
+      ...headerNodeOptions,
+      port: ports.header.p2p + 10,
+      httpPort: ports.header.node + 10,
+      fastSync: true,
+      startTip: startTip,
+      memory: true,
+      logLevel: 'info',
+    };
+
+    // NOTE: since the functionality to start at a later height
+    // involves mutating the networks module's lastCheckpoint
+    // this will impact all other nodes involved in tests since
+    // they all share the same bcoin instance
+    fastNode = new HeaderNode(options);
+    await fastNode.ensure();
+    await fastNode.open();
+    await fastNode.connect();
+    await fastNode.startSync();
+    await sleep(1500);
+
+    const oldHeader = await fastNode.getHeader(startHeight - 1);
+    const newHeader = await fastNode.getHeader(startHeight);
+    console.log('node tip', fastNode.headerindex.state);
+    assert(
+      !oldHeader,
+      'Did not expect to see an earlier block than the start height'
+    );
+    assert(
+      newHeader,
+      'Expected to be able to retrieve a header later than start point'
+    );
+
+    // let's just test that it can resync too
+    await resetChain(fastNode);
+    const tip = await nclient.execute('getblockcount');
+    const fastTip = await fastNode.getTip();
+
+    assert.equal(
+      tip,
+      fastTip.height,
+      'Expected chain tip and header tip to be the same after new blocks mined'
+    );
+  });
+
+  xit('should handle a reorg', () => {});
 });
+
+/*
+ * Helpers
+ */
+
+async function resetChain(node) {
+  // reset chain to 0 again
+  await node.chain.db.reset(0);
+  await node.close();
+  await node.open();
+  await node.connect();
+  await node.startSync();
+
+  // let indexer catch up
+  await sleep(500);
+}
