@@ -3,7 +3,7 @@
     "es6": true,
     "node": true
   },
-  "extends": "eslint:recommended",
+  "extends": ["plugin:prettier/recommended"],
   "parserOptions": {
     "ecmaVersion": 9
   },
@@ -88,7 +88,7 @@
       "ignoreReadBeforeAssign": true
     }],
     "prefer-template": "off",
-    "quotes": ["error", "single"],
+    "quotes": ["error", "single", { "allowTemplateLiterals": true }],
     "semi": ["error", "always"],
     "spaced-comment": ["error", "always", {
       "exceptions": ["!"]

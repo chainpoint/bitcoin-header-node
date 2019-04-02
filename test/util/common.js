@@ -9,8 +9,7 @@ common.sleep = async function sleep(ms) {
 
 common.rimraf = async function(p) {
   const allowed = new RegExp('^\/tmp\/(.*)$');
-  if (!allowed.test(p))
-    throw new Error(`Path not allowed: ${p}.`);
+  if (!allowed.test(p)) throw new Error(`Path not allowed: ${p}.`);
 
-   return await fs.rimraf(p);
+  return await fs.rimraf(p);
 };

@@ -55,7 +55,7 @@ describe('HeaderNode', function() {
     node = await initFullNode({
       ports,
       prefix: testPrefix,
-      logLevel: 'error',
+      logLevel: 'debug',
     });
 
     headerNodeOptions = {
@@ -266,7 +266,7 @@ mined on the network', async () => {
       fastSync: true,
       startTip: startTip,
       memory: true,
-      logLevel: 'info',
+      logLevel: 'error',
     };
 
     // NOTE: since the functionality to start at a later height
@@ -282,7 +282,7 @@ mined on the network', async () => {
 
     const oldHeader = await fastNode.getHeader(startHeight - 1);
     const newHeader = await fastNode.getHeader(startHeight);
-    console.log('node tip', fastNode.headerindex.state);
+    console.log('full node tip:', await node.chain.tip);
     assert(
       !oldHeader,
       'Did not expect to see an earlier block than the start height'

@@ -68,8 +68,4 @@ describe('HeaderIndexer', () => {
       }
     }
   });
-
-  xit('should support initializing a chain from custom height', () => {
-
-  });
 });
