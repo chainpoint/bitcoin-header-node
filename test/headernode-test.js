@@ -63,7 +63,7 @@ describe('HeaderNode', function() {
       network: network.type,
       port: ports.header.p2p,
       httpPort: ports.header.node,
-      logLevel: 'error',
+      logLevel: 'none',
       nodes: [`127.0.0.1:${ports.full.p2p}`],
       memory: false,
       workers: true,
@@ -266,6 +266,8 @@ mined on the network', async () => {
     // involves mutating the networks module's lastCheckpoint
     // this will impact all other nodes involved in tests since
     // they all share the same bcoin instance
+    // This only happens on `open` for a start point that
+    // is after the network's lastCheckpoint (which is zero for regtest)
     fastNode = new HeaderNode(options);
     await fastNode.ensure();
     await fastNode.open();
@@ -319,5 +321,5 @@ async function resetChain(node, start = 0) {
   await node.startSync();
 
   // let indexer catch up
-  await sleep(1500);
+  await sleep(500);
 }
