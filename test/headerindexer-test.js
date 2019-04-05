@@ -68,4 +68,6 @@ describe('HeaderIndexer', () => {
       }
     }
   });
+
+  xit('should set a custom checkpoint', () => {});
 });
