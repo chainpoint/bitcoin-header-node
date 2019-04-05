@@ -101,10 +101,8 @@ describe('HeaderNode', function() {
     await rimraf(headerTestPrefix);
 
     // clear checkpoint information on bcoin module
-    if (node.network.lastCheckpoint) {
-      node.network.checkpointMap = {};
-      node.network.lastCheckpoint = 0;
-    }
+    if (node.network.lastCheckpoint)
+      headerNode.setCustomCheckpoint();
 
     if (fastNode && fastNode.opened) await fastNode.close();
   });
@@ -219,8 +217,7 @@ mined on the network', async () => {
     await sleep(500);
 
     // set checkpoint
-    headerNode.network.checkpointMap = { [checkpoint.height]: checkpoint.hash };
-    headerNode.network.lastCheckpoint = checkpoint.height;
+    headerNode.setCustomCheckpoint(checkpoint.height, checkpoint.hash)
 
     // resetting chain db to clear from memory
     await resetChain(headerNode);
@@ -245,10 +242,8 @@ mined on the network', async () => {
 
   it('should support fast sync with custom starting header', async () => {
     // need to reset checkpoints otherwise causes issues for creating a new node
-    if (node.network.lastCheckpoint) {
-      node.network.checkpointMap = {};
-      node.network.lastCheckpoint = 0;
-    }
+    if (node.network.lastCheckpoint)
+      headerNode.setCustomCheckpoint();
 
     // arbitrary block to start our new node's chain from
     // creating a tip with two blocks (prev and tip)
