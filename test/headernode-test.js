@@ -290,8 +290,19 @@ mined on the network', async () => {
       'Expected to be able to retrieve a header later than start point'
     );
 
-    // confirm that it resets lastCheckpoint to original after
-    // custom fast sync is complete
+    // let's just test that it can reconnect
+    // after losing its in-memory chain
+    await fastNode.disconnect();
+    await resetChain(fastNode, startHeight + 1);
+    const tip = await nclient.execute('getblockcount');
+    const fastTip = await fastNode.getTip();
+
+    assert.equal(
+      tip,
+      fastTip.height,
+      'expected tips to be in sync after "restart"'
+    );
+
   });
 
   xit('should handle a reorg', () => {});
@@ -301,14 +312,17 @@ mined on the network', async () => {
  * Helpers
  */
 
-async function resetChain(node) {
-  // reset chain to 0 again
-  await node.chain.db.reset(0);
+async function resetChain(node, start = 0) {
+  // reset chain to custom start
+  // can't always reset to 0 because `chaindb.reset`
+  // won't work when there is a custom start point
+  // because chain "rewind" won't work
+  await node.chain.db.reset(start);
   await node.close();
   await node.open();
   await node.connect();
   await node.startSync();
 
   // let indexer catch up
-  await sleep(500);
+  await sleep(1500);
 }

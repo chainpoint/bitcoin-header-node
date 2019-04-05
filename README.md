@@ -55,8 +55,11 @@ when `chain`'s locator returns null).
 initial sync and reduce db size further)
 - [ ] Try and get rid of the locator error in `net` (can be fixed if `getLocator` returns array of just start hash)
 - [ ] Investigate other performance improvements such as [compressed headers](https://github.com/RCasatta/compressedheaders)
-- [ ] A header chain with custom start point currently can't handle a chain db reset since
-it can't reconcile competing chains. This should be made more robust, even if just returning an error
+- [ ] A header chain with custom start point currently can't handle a chain db reset.
+This should be made more robust, even if just throwing an error.
+This weakness can be demonstrated in the fast sync test for headernode,
+where the chain is reset. Reset chain db to 0 and the method will throw
+because it can't rewind the chain properly.
 
 ## License
 
