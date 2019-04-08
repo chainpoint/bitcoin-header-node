@@ -55,12 +55,12 @@ describe('HeaderNode', function() {
     node = await initFullNode({
       ports,
       prefix: testPrefix,
-      logLevel: 'error',
+      logLevel: 'none',
     });
 
     headerNodeOptions = {
       prefix: headerTestPrefix,
-      network: 'main',
+      network: network.type,
       port: ports.header.p2p,
       httpPort: ports.header.node,
       logLevel: 'none',
