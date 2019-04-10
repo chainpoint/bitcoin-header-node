@@ -63,7 +63,7 @@ describe('HeaderNode', function() {
       network: network.type,
       port: ports.header.p2p,
       httpPort: ports.header.node,
-      logLevel: 'debug',
+      logLevel: 'error',
       nodes: [`127.0.0.1:${ports.full.p2p}`],
       memory: false,
       workers: true,
