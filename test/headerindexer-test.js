@@ -23,7 +23,18 @@ const cpu = miner.cpu;
 miner.addresses.length = 0;
 miner.addAddress('muhtvdmsnbQEPFuEmxcChX58fGvXaaUoVt');
 
-describe('HeaderIndexer', () => {
+async function mineBlocks(count) {
+  assert(chain.opened);
+  assert(miner.opened);
+
+  for (let i = 0; i < count; i++) {
+    const block = await cpu.mineBlock();
+    assert(block);
+    assert(await chain.add(block));
+  }
+}
+
+describe.only('HeaderIndexer', () => {
   let indexer, options, count;
 
   before(async () => {
@@ -39,11 +50,7 @@ describe('HeaderIndexer', () => {
     await sleep(500);
 
     // mine some blocks
-    for (let i = 0; i < count; i++) {
-      const block = await cpu.mineBlock();
-      assert(block);
-      assert(await chain.add(block));
-    }
+    await mineBlocks(count);
   });
 
   after(async () => {
@@ -104,5 +111,44 @@ describe('HeaderIndexer', () => {
       !Object.keys(network.checkpointMap).length,
       'checkpointMap should clear when no args are passed to setCustomCheckpoint'
     );
+  });
+
+  describe('getLocator', () => {
+    it('should get an array of hashes from header chain tip back to genesis', async () => {
+      const locator = await indexer.getLocator();
+      const genesis = await chain.getEntryByHeight(0);
+      const tip = chain.tip;
+
+      assert.equal(
+        locator[0].toString('hex'),
+        tip.hash.toString('hex'),
+        'Expected first locator hash to equal tip hash'
+      );
+      assert.equal(
+        locator[locator.length - 1].toString('hex'),
+        genesis.hash.toString('hex'),
+        'Expected last locator hash to equal genesis hash'
+      );
+    });
+
+    it('should not retrieve or return hashes for blocks older than a custom startHeight', async () => {
+      // indexer hasn't been initialized with a custom startHeight yet
+      // so we'll add one here and remove it at the end so it doesn't interfere with other tests
+      indexer.startHeight = count;
+
+      await mineBlocks(10);
+
+      const locator = await indexer.getLocator();
+      const expected = await chain.getEntryByHeight(indexer.startHeight);
+
+      assert.equal(
+        locator[locator.length - 1].toString('hex'),
+        expected.hash.toString('hex'),
+        'Last item in locator should be hash of entry at startHeight'
+      );
+
+      // reset startHeight
+      indexer.startHeight = null;
+    });
   });
 });
