@@ -34,7 +34,7 @@ async function mineBlocks(count) {
   }
 }
 
-describe.only('HeaderIndexer', () => {
+describe('HeaderIndexer', () => {
   let indexer, options, count;
 
   before(async () => {

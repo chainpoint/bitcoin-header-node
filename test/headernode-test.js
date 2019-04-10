@@ -63,7 +63,7 @@ describe('HeaderNode', function() {
       network: network.type,
       port: ports.header.p2p,
       httpPort: ports.header.node,
-      logLevel: 'none',
+      logLevel: 'debug',
       nodes: [`127.0.0.1:${ports.full.p2p}`],
       memory: false,
       workers: true,
@@ -195,7 +195,7 @@ mined on the network', async () => {
     );
   });
 
-  xit('should support checkpoints', async () => {
+  it('should support checkpoints', async () => {
     // header index needs to maintain chain from the last checkpoint
     // this test will set a checkpoint for our regtest network
     // reset the headernode chain similar to the previous test
@@ -217,9 +217,9 @@ mined on the network', async () => {
 
     // set checkpoint
     headerNode.setCustomCheckpoint(checkpoint.height, checkpoint.hash);
-    console.log('checkpoint:', checkpoint.height);
+
     // resetting chain db to clear from memory
-    await resetChain(headerNode);
+    await resetChain(headerNode, checkpoint.height - count);
 
     const historicalEntry = await headerNode.chain.getEntryByHeight(
       checkpoint.height - 2
@@ -260,6 +260,10 @@ mined on the network', async () => {
       memory: true,
     };
 
+    // set a custom lastCheckpoint to confirm it can sync past it
+    let checkpointEntry = await node.chain.getEntryByHeight(startHeight + 10);
+    assert(checkpointEntry, 'Problem finding checkpoint block');
+
     // NOTE: since the functionality to start at a later height
     // involves mutating the networks module's lastCheckpoint
     // this will impact all other nodes involved in tests since
@@ -267,6 +271,8 @@ mined on the network', async () => {
     // This only happens on `open` for a start point that
     // is after the network's lastCheckpoint (which is zero for regtest)
     fastNode = new HeaderNode(options);
+
+    fastNode.setCustomCheckpoint(checkpointEntry.height, checkpointEntry.hash);
     await fastNode.ensure();
     await fastNode.open();
     await fastNode.connect();
@@ -297,6 +303,7 @@ mined on the network', async () => {
       fastTip.height,
       'expected tips to be in sync after "restart"'
     );
+    fastNode.setCustomCheckpoint();
   });
 
   xit('should handle a reorg', () => {});
