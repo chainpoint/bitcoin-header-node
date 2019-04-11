@@ -18,7 +18,7 @@ const node = new HeaderNode({
   persistent: true,
   workers: true,
   listen: true,
-  loader: require
+  loader: require,
 });
 
 // Temporary hack
@@ -40,8 +40,8 @@ process.on('SIGINT', async () => {
   await node.ensure();
   await node.open();
   await node.connect();
-  node.startSync();
-})().catch((err) => {
+  await node.startSync();
+})().catch(err => {
   console.error(err.stack);
   process.exit(1);
 });

@@ -55,7 +55,7 @@ describe('HeaderNode', function() {
     node = await initFullNode({
       ports,
       prefix: testPrefix,
-      logLevel: 'error',
+      logLevel: 'none',
     });
 
     headerNodeOptions = {
@@ -101,10 +101,7 @@ describe('HeaderNode', function() {
     await rimraf(headerTestPrefix);
 
     // clear checkpoint information on bcoin module
-    if (node.network.lastCheckpoint) {
-      node.network.checkpointMap = {};
-      node.network.lastCheckpoint = 0;
-    }
+    if (node.network.lastCheckpoint) headerNode.setCustomCheckpoint();
 
     if (fastNode && fastNode.opened) await fastNode.close();
   });
@@ -203,7 +200,7 @@ mined on the network', async () => {
     // this test will set a checkpoint for our regtest network
     // reset the headernode chain similar to the previous test
     // and then confirm that only the non-historical blocks were
-    // restored on the chain
+    // restored on the chain, i.e. blocks newer than lastCheckpoint
 
     const checkpoint = await headerNode.getTip();
     const count = 10;
@@ -219,18 +216,17 @@ mined on the network', async () => {
     await sleep(500);
 
     // set checkpoint
-    headerNode.network.checkpointMap = { [checkpoint.height]: checkpoint.hash };
-    headerNode.network.lastCheckpoint = checkpoint.height;
+    headerNode.setCustomCheckpoint(checkpoint.height, checkpoint.hash);
 
     // resetting chain db to clear from memory
-    await resetChain(headerNode);
+    await resetChain(headerNode, checkpoint.height - count);
 
     const historicalEntry = await headerNode.chain.getEntryByHeight(
       checkpoint.height - 2
     );
 
     const checkpointEntry = await headerNode.chain.getEntryByHeight(
-      checkpoint.height + 1
+      checkpoint.height + count - 1
     );
 
     assert(
@@ -243,12 +239,9 @@ mined on the network', async () => {
     );
   });
 
-  it.only('should support fast sync with custom starting header', async () => {
+  it('should support fast sync with custom starting header', async () => {
     // need to reset checkpoints otherwise causes issues for creating a new node
-    if (node.network.lastCheckpoint) {
-      node.network.checkpointMap = {};
-      node.network.lastCheckpoint = 0;
-    }
+    if (node.network.lastCheckpoint) headerNode.setCustomCheckpoint();
 
     // arbitrary block to start our new node's chain from
     // creating a tip with two blocks (prev and tip)
@@ -263,26 +256,32 @@ mined on the network', async () => {
       ...headerNodeOptions,
       port: ports.header.p2p + 10,
       httpPort: ports.header.node + 10,
-      fastSync: true,
       startTip: startTip,
       memory: true,
-      logLevel: 'info',
     };
+
+    // set a custom lastCheckpoint to confirm it can sync past it
+    let checkpointEntry = await node.chain.getEntryByHeight(startHeight + 10);
+    assert(checkpointEntry, 'Problem finding checkpoint block');
 
     // NOTE: since the functionality to start at a later height
     // involves mutating the networks module's lastCheckpoint
     // this will impact all other nodes involved in tests since
     // they all share the same bcoin instance
+    // This only happens on `open` for a start point that
+    // is after the network's lastCheckpoint (which is zero for regtest)
     fastNode = new HeaderNode(options);
+
+    fastNode.setCustomCheckpoint(checkpointEntry.height, checkpointEntry.hash);
     await fastNode.ensure();
     await fastNode.open();
     await fastNode.connect();
     await fastNode.startSync();
-    await sleep(1500);
+    await sleep(500);
 
     const oldHeader = await fastNode.getHeader(startHeight - 1);
-    const newHeader = await fastNode.getHeader(startHeight);
-    console.log('node tip', fastNode.headerindex.state);
+    const newHeader = await fastNode.getHeader(startHeight + 5);
+
     assert(
       !oldHeader,
       'Did not expect to see an earlier block than the start height'
@@ -292,16 +291,19 @@ mined on the network', async () => {
       'Expected to be able to retrieve a header later than start point'
     );
 
-    // let's just test that it can resync too
-    await resetChain(fastNode);
+    // let's just test that it can reconnect
+    // after losing its in-memory chain
+    await fastNode.disconnect();
+    await resetChain(fastNode, startHeight + 1);
     const tip = await nclient.execute('getblockcount');
     const fastTip = await fastNode.getTip();
 
     assert.equal(
       tip,
       fastTip.height,
-      'Expected chain tip and header tip to be the same after new blocks mined'
+      'expected tips to be in sync after "restart"'
     );
+    fastNode.setCustomCheckpoint();
   });
 
   xit('should handle a reorg', () => {});
@@ -311,9 +313,12 @@ mined on the network', async () => {
  * Helpers
  */
 
-async function resetChain(node) {
-  // reset chain to 0 again
-  await node.chain.db.reset(0);
+async function resetChain(node, start = 0) {
+  // reset chain to custom start
+  // can't always reset to 0 because `chaindb.reset`
+  // won't work when there is a custom start point
+  // because chain "rewind" won't work
+  await node.chain.db.reset(start);
   await node.close();
   await node.open();
   await node.connect();

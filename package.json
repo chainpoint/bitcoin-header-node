@@ -4,7 +4,8 @@
   "description": "A lightweight node for syncing only bitcoin block headers from a specific height",
   "main": "lib/index.js",
   "scripts": {
-    "test": "mocha --reporter spec --watch test/*-test.js"
+    "test": "mocha --reporter spec --watch test/*-test.js",
+    "test:inspect": "mocha --reporter spec --inspect-brk --watch test/*-test.js"
   },
   "author": "bucko",
   "license": "MIT",
@@ -13,16 +14,18 @@
   },
   "dependencies": {
     "bcoin": "bucko13/bcoin#expose-filter",
+    "bcurl": "^0.1.6",
     "bdb": "^1.1.5",
     "bfile": "^0.2.0",
     "bmutex": "^0.1.5",
     "bsert": "^0.0.9",
     "bufio": "^1.0.5",
-    "eslint-plugin-prettier": "^3.0.1",
     "prettier": "^1.16.4"
   },
   "devDependencies": {
     "eslint": "^5.15.1",
+    "eslint-config-prettier": "^4.1.0",
+    "eslint-plugin-prettier": "^3.0.1",
     "mocha": "^6.0.2"
   }
 }
