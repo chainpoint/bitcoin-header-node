@@ -1,7 +1,9 @@
 # Bitcoin Header Node
+
 ##### A lightweight node for syncing header data w/ as little data as possible from the Bitcoin network
 
 ## Background
+
 A bcoin spv node is already very lightweight, around ~160MB of chain data on mainnet as of block 568,134.
 However, it also stores some extra metadata with the headers. This helps for PoW verification but makes the
 headers a little heavier than the minimum [80 bytes per header](https://bitcoin.org/en/glossary/block-header)
@@ -15,10 +17,12 @@ for bcoin that separtes out the indexers (Tx, Address, and Compact Filters) into
 utilities for custom indexers.
 
 ## Usage
+
 Configuration options are the same as with bcoin. See more information
 [here](https://github.com/bcoin-org/bcoin/blob/master/docs/configuration.md).
 
 Using from GitHub
+
 ```bash
 $ git clone https://github.com/bucko13/headernode
 $ cd headernode
@@ -28,7 +32,40 @@ $ ./bin/headernode
 
 Mainnet should take between 1-2 hours for initial sync.
 
+## `Fast Sync` with a custom start block
+
+### About Custom Start Blocks
+
+Header Node supports the ability to start syncing from a custom start height rather than syncing a
+new header chain from scratch. This can have the advantage of saving space and sync time if you don't need the full history
+of previous headers.
+
+This can be a little tricky however since a blockchain by its nature relies on the fact of an unbroken chain
+of history connected by hashes going back to the Genesis Block. **Make sure that you trust the block
+data you are starting with**. Even if you have an incorrect start block however, unless you're connecting to malicious peers,
+the sync will just fail.
+
+### Usage
+
+You need to tell your node you want to start with a custom start point. There are two ways to do this on mainnet: with
+the start height or with the raw header data for the start block and _its previous block_ (this is needed for contextual checks).
+For other networks, including testnet or regtest, only the raw data will work since the height functionality works by querying
+the [btc.com](https://btc.com) API for the target blocks (you can see how this works in the headernode tests for startTip).
+
+Both options, `start-tip` or `start-height`, can be passed as with any
+[bcoin Configuration](https://github.com/bcoin-org/bcoin/blob/master/docs/configuration.md).
+
+For example, to start from block 337022, you can pass in the following at runtime:
+
+```bash
+$ ./bin/headernode --start-height=337022
+```
+
+Alternatively, adding it to a bcoin.conf configuration file in your node's prefix directory or as an environment variable `BCOIN_START_HEIGHT`
+will also work. For a start-tip, you must pass in an array of two raw block headers.
+
 ## Testing
+
 There are tests for the header indexer and the header node.
 
 ```bash
@@ -36,30 +73,36 @@ $ yarn test
 ```
 
 ## Notes
+
 If the initial sync is interrupted and restarted, you may notice your logs (if they are on)
 spitting out a bunch of messages about blocks being re-added to the chain.
-This is the in-memory chain getting re-initialized from the headersindex.
-This is necessary since the chain is needed for the initial sync, but since
-the chain isn't being persisted, it needs to be re-initialized from our header information.
-This could be a potential area for future optimizations. You can this being tested in the headernode
-tests where the chain is reset to height `0` and recovered from the header index.
+This is the in-memory chain getting re-initialized from the headersindex. This is necessary
+for blocks after the network's lastCheckpoint since the chain db is used for certain contextual checks
+when syncing a node, for example handling re-orgs and orphan blocks. We take the header index data that is persisted
+and add these to the chain db so that they are available for these operations.
 
-You may also see error messages in the log from the `net` module. This is just the network
-pool complaining about not finding the historical chain entries for an initial sync or resync.
-Luckily the sync doesn't need this (the `locator` can be empty but an error is thrown regardless
-when `chain`'s locator returns null).
+The HeaderIndexer takes the place of the chain in several places for the Header Node to avoid some of this
+reliance on the chain which we are not persisting. The custom `HeaderPool` is extended from bcoin's default `Pool` object
+to replace calls to methods normally done by the chain that won't work given that there is no chain (or in the case
+of a custom start point, not even a proper genesis block). The best example is `getLocator` which normally gets block hashes
+all the way back to genesis on the chain, but in our case will run the checks on the header index, and stop early if using
+a custom start point.
 
 ## TODO:
+
 - [ ] Add HTTP and RPC support for retrieving headers with a bcoin compatible client
-- [ ] Add support to start syncing from a _known_ and _trusted_ header checkpoint (this should speed up
-initial sync and reduce db size further)
-- [ ] Try and get rid of the locator error in `net` (can be fixed if `getLocator` returns array of just start hash)
+- [x] Add support to start syncing from a _known_ and _trusted_ header checkpoint (this should speed up
+      initial sync and reduce db size further)
+- [x] Try and get rid of the locator error in `net` (can be fixed if `getLocator` returns array of just start hash)
 - [ ] Investigate other performance improvements such as [compressed headers](https://github.com/RCasatta/compressedheaders)
 - [ ] A header chain with custom start point currently can't handle a chain db reset.
-This should be made more robust, even if just throwing an error.
-This weakness can be demonstrated in the fast sync test for headernode,
-where the chain is reset. Reset chain db to 0 and the method will throw
-because it can't rewind the chain properly.
+      This should be made more robust, even if just throwing an error.
+      This weakness can be demonstrated in the fast sync test for headernode,
+      where the chain is reset. Reset chain db to 0 and the method will throw
+      because it can't rewind the chain properly.
+- [ ] Fix or avoid tedious process of re-initializing chain from headers index when past lastCheckpoint
+- [ ] Non-deterministic problem where the node gets caught in an infinite loop resolving orphans
+      after having synced to tip and the node restarts.
 
 ## License
 
