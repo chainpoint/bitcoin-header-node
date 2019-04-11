@@ -1,7 +1,8 @@
 'use strict';
 const assert = require('bsert');
 
-const { Network, ChainEntry } = require('bcoin');
+const { Network } = require('bcoin');
+const { NodeClient } = require('bclient');
 
 const HeaderNode = require('../lib/headernode');
 const { rimraf, sleep } = require('./util/common');
@@ -30,7 +31,6 @@ const ports = {
   header: {
     p2p: 49431,
     node: 49432,
-    wallet: 49433,
   },
 };
 
@@ -63,6 +63,7 @@ describe('HeaderNode', function() {
       network: network.type,
       port: ports.header.p2p,
       httpPort: ports.header.node,
+      apiKey: 'iamsatoshi',
       logLevel: 'error',
       nodes: [`127.0.0.1:${ports.full.p2p}`],
       memory: false,
@@ -306,6 +307,21 @@ mined on the network', async () => {
     fastNode.setCustomCheckpoint();
   });
 
+  it('should setup an http and rpc server', async () => {
+    const client = new NodeClient({
+      port: ports.header.node,
+      apiKey: headerNodeOptions.apiKey,
+    });
+
+    const info = await client.getInfo();
+    const chain = headerNode.chain;
+
+    assert.equal(
+      info.chain.height,
+      chain.height,
+      'Expected to get back chain height from info endpoint'
+    );
+  });
   xit('should handle a reorg', () => {});
 });
 

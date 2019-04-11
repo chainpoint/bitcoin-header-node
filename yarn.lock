@@ -137,6 +137,22 @@ bcfg@~0.1.5:
   dependencies:
     bsert "~0.0.8"
 
+bcfg@~0.1.6:
+  version "0.1.6"
+  resolved "https://registry.yarnpkg.com/bcfg/-/bcfg-0.1.6.tgz#f77a6323bddef14f3886222e7ef8ccc0bc2143ec"
+  integrity sha512-BR2vwQZwu24aRm588XHOnPVjjQtbK8sF0RopRFgMuke63/REJMWnePTa2YHKDBefuBYiVdgkowuB1/e4K7Ue3g==
+  dependencies:
+    bsert "~0.0.10"
+
+bclient@^0.1.7:
+  version "0.1.7"
+  resolved "https://registry.yarnpkg.com/bclient/-/bclient-0.1.7.tgz#2ee5b76da990605c57dbb001b21405cdcc435ec4"
+  integrity sha512-tD1b48VGrJ10Hkv1Slew88DLcIBAYbhjGIwO7fRPp0mTcc5jZjGhFjsrHwgPsChj9HYctA8yMw/ChGfheqZGDA==
+  dependencies:
+    bcfg "~0.1.6"
+    bcurl "~0.1.6"
+    bsert "~0.0.10"
+
 bclient@~0.1.6:
   version "0.1.6"
   resolved "https://registry.yarnpkg.com/bclient/-/bclient-0.1.6.tgz#b6bf166023785819f85073e09481b3a5132a2c0f"
@@ -179,6 +195,16 @@ bcoin@bucko13/bcoin#expose-filter:
     mrmr "~0.1.5"
     n64 "~0.2.6"
 
+bcrypto@^3.1.2:
+  version "3.1.2"
+  resolved "https://registry.yarnpkg.com/bcrypto/-/bcrypto-3.1.2.tgz#4d9f647c8dc7d8bd6cb41182a9ef81d6eb68b11d"
+  integrity sha512-uZbKJWLLREVlQMdWqUNCkdl+DGpvANGvsO0f471NtRMAmUPxHA6DWl0l83SoyVvq0/h2m72BbNkos4CxzTb29g==
+  dependencies:
+    bsert "~0.0.10"
+    bufio "~1.0.6"
+    loady "~0.0.1"
+    nan "^2.13.1"
+
 bcrypto@~3.0.2:
   version "3.0.2"
   resolved "https://registry.yarnpkg.com/bcrypto/-/bcrypto-3.0.2.tgz#3fd96da06447724cebdfeed14821ade86babec53"
@@ -189,7 +215,7 @@ bcrypto@~3.0.2:
     bufio "~1.0.4"
     nan "~2.12.1"
 
-bcurl@^0.1.6:
+bcurl@^0.1.6, bcurl@~0.1.6:
   version "0.1.6"
   resolved "https://registry.yarnpkg.com/bcurl/-/bcurl-0.1.6.tgz#97df6a12a119e30f4948a73ff9173410f73cd308"
   integrity sha512-noeDhfqFiUcNOUuZKErkXcbZfxBjn6duTfYPEfA4hAYXGr7gwVxkAWvIerxl3ZLLyn8jzh7Oi0nHlrLm1ST9Fw==
@@ -289,7 +315,7 @@ blst@~0.1.4:
   dependencies:
     bsert "~0.0.8"
 
-bmutex@^0.1.5, bmutex@~0.1.5:
+bmutex@~0.1.5:
   version "0.1.5"
   resolved "https://registry.yarnpkg.com/bmutex/-/bmutex-0.1.5.tgz#0b96908c28aa12821f7494eef468d235566d19e5"
   integrity sha512-vBKk+msKCdEE3Zs3fKxVATgibdf6U2k1dR1XALvXA/DuTDRQu9ot2TEp4RoJGilLvSlZxAHNq0AeBesd7KIe+Q==
@@ -416,6 +442,11 @@ bufio@^1.0.5, bufio@~1.0.4:
   resolved "https://registry.yarnpkg.com/bufio/-/bufio-1.0.5.tgz#4d397b855cc5aa595e2a3a86014edb965b5f93d8"
   integrity sha512-oS+gSA1CypnrTwesocIx/O4Gb/2TwME1yLN/qUEp2oJfkbRABBDuKlTsQkVPz0cMzM1T0Oq73jBqfwoSG0Xr7A==
 
+bufio@~1.0.6:
+  version "1.0.6"
+  resolved "https://registry.yarnpkg.com/bufio/-/bufio-1.0.6.tgz#e0eb6d70b2efcc997b6f8872173540967f90fa4d"
+  integrity sha512-mjYZFRHmI9bk3Oeexu0rWjHFY+w6hGLabdmwSFzq+EFr4MHHsNOYduDVdYl71NG5pTPL7GGzUCMk9cYuV34/Qw==
+
 bupnp@~0.2.5:
   version "0.2.5"
   resolved "https://registry.yarnpkg.com/bupnp/-/bupnp-0.2.5.tgz#62bef7912d30e6fba592572e4c6c392e5d1f1c74"
@@ -425,12 +456,27 @@ bupnp@~0.2.5:
     brq "~0.1.6"
     bsert "~0.0.8"
 
+bval@^0.1.6:
+  version "0.1.6"
+  resolved "https://registry.yarnpkg.com/bval/-/bval-0.1.6.tgz#e4efd4a32c563da054a5a1f055080b6089356a9f"
+  integrity sha512-jxNH9gSx7g749hQtS+nTxXYz/bLxwr4We1RHFkCYalNYcj12RfbW6qYWsKu0RYiKAdFcbNoZRHmWrIuXIyhiQQ==
+  dependencies:
+    bsert "~0.0.10"
+
 bval@~0.1.5:
   version "0.1.5"
   resolved "https://registry.yarnpkg.com/bval/-/bval-0.1.5.tgz#c157e0074e50cc06625464aaf9eee87e67891201"
   integrity sha512-PN7Ps7MHrFk7H1cT/mvRsa8J3bx1MrApxDXZx3kee4hCjDns2v89rWO8wnuEcLEVZvNqayjKm6ATia9FRtd2aw==
   dependencies:
     bsert "~0.0.8"
+
+bweb@^0.1.8:
+  version "0.1.8"
+  resolved "https://registry.yarnpkg.com/bweb/-/bweb-0.1.8.tgz#dd174fca58ce88151d98f02d31399a43ac758fb6"
+  integrity sha512-xGMDbVf3JnLka7VTWOiy5GMersZcAuUMtd97zs7OUA/rrt2Z8bWVAwzCVPFxVzYMreYu7M+W3NZCJSpUdd7umA==
+  dependencies:
+    bsert "~0.0.10"
+    bsock "~0.1.8"
 
 bweb@~0.1.7:
   version "0.1.7"
@@ -1411,6 +1457,11 @@ levn@^0.3.0, levn@~0.3.0:
     prelude-ls "~1.1.2"
     type-check "~0.3.2"
 
+loady@~0.0.1:
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/loady/-/loady-0.0.1.tgz#24a99c14cfed9cd0bffed365b1836035303f7e5d"
+  integrity sha512-PW5Z13Jd0v6ZcA1P6ZVUc3EV8BJwQuAiwUvvT6VQGHoaZ1d/tu7r1QZctuKfQqwy9SFBWeAGfcIdLxhp7ZW3Rw==
+
 locate-path@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/locate-path/-/locate-path-3.0.0.tgz#dbec3b3ab759758071b58fe59fc41871af21400e"
@@ -1572,6 +1623,11 @@ n64@~0.2.6:
   version "0.2.6"
   resolved "https://registry.yarnpkg.com/n64/-/n64-0.2.6.tgz#a7b61720a4edebdd6f7cb3da120f8bd99aa1a36d"
   integrity sha512-UMoVVrk28Lkk3rjroRp8QU0ElaihWyMZ1NZj3NootEQmbSKKQoeIp6B4aMguWZIsFnOCW5sfVt0vx7gFsOWZQQ==
+
+nan@^2.13.1:
+  version "2.13.2"
+  resolved "https://registry.yarnpkg.com/nan/-/nan-2.13.2.tgz#f51dc7ae66ba7d5d55e1e6d4d8092e802c9aefe7"
+  integrity sha512-TghvYc72wlMGMVMluVo9WRJc0mB8KxxF/gZ4YYFy7V2ZQX9l7rgbPg7vjS9mt6U5HXODVFVI2bOduCzwOMv/lw==
 
 nan@~2.12.1:
   version "2.12.1"
