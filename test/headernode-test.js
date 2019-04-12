@@ -2,9 +2,11 @@
 const assert = require('bsert');
 
 const { Network, ChainEntry } = require('bcoin');
+const { NodeClient } = require('bclient');
 
 const HeaderNode = require('../lib/headernode');
 const { rimraf, sleep } = require('./util/common');
+const { revHex } = require('../lib/util');
 const {
   initFullNode,
   initNodeClient,
@@ -30,7 +32,6 @@ const ports = {
   header: {
     p2p: 49431,
     node: 49432,
-    wallet: 49433,
   },
 };
 
@@ -63,6 +64,7 @@ describe('HeaderNode', function() {
       network: network.type,
       port: ports.header.p2p,
       httpPort: ports.header.node,
+      apiKey: 'iamsatoshi',
       logLevel: 'error',
       nodes: [`127.0.0.1:${ports.full.p2p}`],
       memory: false,
@@ -307,6 +309,82 @@ mined on the network', async () => {
   });
 
   xit('should handle a reorg', () => {});
+
+  describe('HTTP/RPC', () => {
+    let client;
+    beforeEach(async () => {
+      client = new NodeClient({
+        port: ports.header.node,
+        apiKey: headerNodeOptions.apiKey,
+      });
+      await client.open();
+    });
+
+    afterEach(async () => {
+      await client.close();
+    });
+
+    it('should be able to return info about the node', async () => {
+      const info = await client.getInfo();
+      const rpcInfo = await client.execute('getinfo');
+      const chain = headerNode.chain;
+      assert.equal(
+        info.chain.height,
+        chain.height,
+        'Expected to get back chain height from info endpoint'
+      );
+      assert(rpcInfo);
+    });
+
+    it('should support getting block headers with rpc and http endpoints', async () => {
+      const height = Math.floor(headerNode.chain.height / 2);
+      const header = await headerNode.getHeader(height);
+
+      // http
+      const httpBlockHeader = await client.getBlock(height);
+      const httpHeader = await client.get(`/header/${height}`);
+
+      // note that these will be the same (block and header)
+      // but we want to maintain support for the block endpoint
+      assert(httpBlockHeader, 'Could not get block with http');
+      assert(httpHeader, 'Could not get header by height with http');
+
+      assert.equal(
+        httpBlockHeader.merkleRoot,
+        revHex(header.merkleRoot),
+        'Expected merkle root returned by server to match with one from header node'
+      );
+
+      // rpc
+      const rpcHeader = await client.execute('getblockheader', [height]);
+      assert(rpcHeader, 'Could not get block by height with rpc');
+      assert.equal(
+        rpcHeader.merkleroot,
+        revHex(header.merkleRoot),
+        'Expected merkle root returned by server to match with one from header node'
+      );
+    });
+
+    it('should support socket subscriptions to new block events', async () => {
+      let tip = await client.getTip();
+      assert(tip);
+      let entry;
+      client.bind('chain connect', raw => {
+        entry = ChainEntry.fromRaw(raw);
+      });
+
+      await generateBlocks(1, nclient, coinbase);
+      await sleep(500);
+
+      tip = await client.getTip();
+      assert(
+        entry,
+        'Did not get an entry from a chain connect event after mining a block'
+      );
+
+      assert.equal(revHex(entry.hash), revHex(ChainEntry.fromRaw(tip).hash));
+    });
+  });
 });
 
 /*

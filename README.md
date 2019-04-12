@@ -4,19 +4,19 @@
 
 ## Background
 
-A bcoin spv node is already very lightweight, around ~160MB of chain data on mainnet as of block 568,134.
+A bcoin spv node is already very lightweight, around 160MB of chain data on mainnet as of block 568,134.
 However, it also stores some extra metadata with the headers. This helps for PoW verification but makes the
 headers a little heavier than the minimum [80 bytes per header](https://bitcoin.org/en/glossary/block-header)
 (in fact bcoin stores the [chainentry](https://github.com/bcoin-org/bcoin/blob/master/lib/blockchain/chainentry.js)
 primitive for spv sync rather than just the headers).
 
 This Header Node implementation reduces the size of the data stored on disk for header syncing by using an in-memory
-chain to sync with peers and a separate indexer database to store the headers. This brings the db size down to ~76MB
+chain to sync with peers and a separate indexer database to store the headers. This brings the db size down to 76MB
 though further optimizations may be possible. The Header Indexer is based on a currently in progress feature
 for bcoin that separtes out the indexers (Tx, Address, and Compact Filters) into their own databases and exposes
 utilities for custom indexers.
 
-## Usage
+## Installation
 
 Configuration options are the same as with bcoin. See more information
 [here](https://github.com/bcoin-org/bcoin/blob/master/docs/configuration.md).
@@ -64,6 +64,78 @@ $ ./bin/headernode --start-height=337022
 Alternatively, adding it to a bcoin.conf configuration file in your node's prefix directory or as an environment variable `BCOIN_START_HEIGHT`
 will also work. For a start-tip, you must pass in an array of two raw block headers.
 
+## Header Node Client
+
+The Header Node comes with a built-in HTTP server that includes both a REST API and RPC interface (on the backend it uses an
+extended instance of the [bweb](https://github.org/bcoin-org/bweb) object used in bcoin)
+You can use the `bclient` package to interact with your header node, either installed as a global package with npm and used via CLI
+or used directly in a script. Authentication is also supported on the node. A client that wishes to connect will need
+an API key if this is enabled.
+
+(Read the [bcoin API docs](http://bcoin.io/api-docs/index.html) for more information on installing and setting up a client).
+
+### Endpoints
+
+#### GET /block/:height
+
+#### GET /header/:height
+
+```js
+(async () => {
+  const height = 450000;
+  // these two requests are equivalent
+  await client.getBlock(height);
+  await client.get(`/header/${height}`);
+})();
+```
+
+##### HTTP Response
+
+```json
+{
+  "hash": "0000000000000000014083723ed311a461c648068af8cef8a19dcd620c07a20b",
+  "version": 536870912,
+  "prevBlock": "0000000000000000024c4a35f0485bab79ce341cdd5cc6b15186d9b5b57bf3da",
+  "merkleRoot": "ff508cf57d57bd086451493f100dd69b6ba7bdab2a0c14254053224d42521925",
+  "time": 1485382289,
+  "bits": 402836551,
+  "nonce": 2972550269,
+  "height": 450000,
+  "chainwork": "00000000000000000000000000000000000000000036fb5c7c89f1a9eedb191c"
+}
+```
+
+#### `getblockheader`
+
+The RPC interface is also available
+
+```js
+(async () => {
+  const height = 450000;
+  await client.execute('getblockheader', [height]);
+})();
+```
+
+##### Response
+
+```json
+{
+  "hash": "0000000000000000014083723ed311a461c648068af8cef8a19dcd620c07a20b",
+  "confirmations": 121271,
+  "height": 450000,
+  "version": 536870912,
+  "versionHex": "20000000",
+  "merkleroot": "ff508cf57d57bd086451493f100dd69b6ba7bdab2a0c14254053224d42521925",
+  "time": 1485382289,
+  "mediantime": 1485382289,
+  "bits": 402836551,
+  "difficulty": 392963262344.37036,
+  "chainwork": "00000000000000000000000000000000000000000036fb5c7c89f1a9eedb191c",
+  "previousblockhash": "0000000000000000024c4a35f0485bab79ce341cdd5cc6b15186d9b5b57bf3da",
+  "nextblockhash": null
+}
+```
+
 ## Testing
 
 There are tests for the header indexer and the header node.
@@ -90,7 +162,7 @@ a custom start point.
 
 ## TODO:
 
-- [ ] Add HTTP and RPC support for retrieving headers with a bcoin compatible client
+- [x] Add HTTP and RPC support for retrieving headers with a bcoin compatible client
 - [x] Add support to start syncing from a _known_ and _trusted_ header checkpoint (this should speed up
       initial sync and reduce db size further)
 - [x] Try and get rid of the locator error in `net` (can be fixed if `getLocator` returns array of just start hash)

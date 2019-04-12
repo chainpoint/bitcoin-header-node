@@ -6,11 +6,11 @@
 
 'use strict';
 
-const {NodeClient, WalletClient} = require('bclient');
+const { NodeClient, WalletClient } = require('bclient');
 
 const assert = require('bsert');
-const {sleep} = require('./common');
-const {FullNode, SPVNode, Coin, MTX} = require('bcoin');
+const { sleep } = require('./common');
+const { FullNode, SPVNode, Coin, MTX } = require('bcoin');
 
 async function initFullNode(options) {
   const node = new FullNode({
@@ -28,9 +28,9 @@ async function initFullNode(options) {
     memory: false,
     plugins: [require('bcoin/lib/wallet/plugin')],
     env: {
-      'BCOIN_WALLET_HTTP_PORT': (options.ports.full.wallet).toString()
+      BCOIN_WALLET_HTTP_PORT: options.ports.full.wallet.toString(),
     },
-    logLevel: options.logLevel
+    logLevel: options.logLevel,
   });
   await node.ensure();
   await node.open();
@@ -54,9 +54,9 @@ async function initSPVNode(options) {
     memory: false,
     plugins: [require('../../lib/wallet/plugin')],
     env: {
-      'BCOIN_WALLET_HTTP_PORT': (options.ports.spv.wallet).toString()
+      BCOIN_WALLET_HTTP_PORT: options.ports.spv.wallet.toString(),
     },
-    logLevel: options.logLevel
+    logLevel: options.logLevel,
   });
 
   await node.ensure();
@@ -70,7 +70,7 @@ async function initNodeClient(options) {
   const nclient = new NodeClient({
     network: 'regtest',
     port: options.ports.node,
-    apiKey: 'foo'
+    apiKey: 'foo',
   });
   await nclient.open();
   return nclient;
@@ -80,7 +80,7 @@ async function initWalletClient(options) {
   const wclient = new WalletClient({
     network: 'regtest',
     port: options.ports.wallet,
-    apiKey: 'foo'
+    apiKey: 'foo',
   });
   await wclient.open();
   return wclient;
@@ -97,7 +97,7 @@ async function initWallet(wclient) {
   // broadcast to spv node wallets.
   const info = await wallet.createAccount('blue', {
     witness: true,
-    lookahead: 40
+    lookahead: 40,
   });
   assert(info.initialized);
   assert.strictEqual(info.name, 'blue');
@@ -174,26 +174,24 @@ async function generateReorg(depth, nclient, wclient, coinbase) {
   return {
     invalidated,
     validated,
-    txids
+    txids,
   };
 }
 
 async function generateTxs(options) {
-  const {wclient, spvwclient, count, amount} = options;
-  let addr, txid = null;
+  const { wclient, spvwclient, count, amount } = options;
+  let addr,
+    txid = null;
 
   await wclient.execute('selectwallet', ['test']);
 
   const txids = [];
 
   for (let i = 0; i < count; i++) {
-    if (options.gap && !(i % options.gap))
-      await sleep(options.sleep);
+    if (options.gap && !(i % options.gap)) await sleep(options.sleep);
 
-    if (spvwclient)
-      addr = await spvwclient.execute('getnewaddress', ['blue']);
-    else
-      addr = await wclient.execute('getnewaddress', ['blue']);
+    if (spvwclient) addr = await spvwclient.execute('getnewaddress', ['blue']);
+    else addr = await wclient.execute('getnewaddress', ['blue']);
 
     txid = await wclient.execute('sendtoaddress', [addr, amount]);
     txids.push(txid);
@@ -203,12 +201,7 @@ async function generateTxs(options) {
 }
 
 async function sendCoinbase(options) {
-  const {
-    nclient,
-    height,
-    address,
-    coinbaseKey
-  } = options;
+  const { nclient, height, address, coinbaseKey } = options;
 
   const hash = await nclient.execute('getblockhash', [height]);
   const block = await nclient.execute('getblock', [hash, true, true]);
@@ -219,42 +212,35 @@ async function sendCoinbase(options) {
 
   const mtx = new MTX();
 
-  mtx.addCoin(Coin.fromOptions({
-    value: 5000000000,
-    script: script,
-    hash: prevhash,
-    index: 0
-  }));
+  mtx.addCoin(
+    Coin.fromOptions({
+      value: 5000000000,
+      script: script,
+      hash: prevhash,
+      index: 0,
+    })
+  );
 
   mtx.addOutput({
     address: address,
-    value: 4999000000
+    value: 4999000000,
   });
 
   mtx.sign(coinbaseKey);
 
   const tx = mtx.toTX();
 
-  await nclient.execute('sendrawtransaction',
-                        [tx.toRaw().toString('hex')]);
+  await nclient.execute('sendrawtransaction', [tx.toRaw().toString('hex')]);
 }
 
 async function generateInitialBlocks(options) {
-  const {
-    nclient,
-    wclient,
-    spvwclient,
-    coinbase,
-    genesisTime
-  } = options;
+  const { nclient, wclient, spvwclient, coinbase, genesisTime } = options;
 
-  let {blocks, count} = options;
+  let { blocks, count } = options;
 
-  if (!blocks)
-    blocks = 100;
+  if (!blocks) blocks = 100;
 
-  if (!count)
-    count = 50;
+  if (!count) count = 50;
 
   const blockInterval = 600;
   const timewarp = 3200;
@@ -277,12 +263,11 @@ async function generateInitialBlocks(options) {
     // Time warping blocks that have time previous
     // to the previous block
     let blocktime = genesisTime + c * blockInterval;
-    if (c % 5)
-      blocktime -= timewarp;
+    if (c % 5) blocktime -= timewarp;
     await nclient.execute('setmocktime', [blocktime]);
 
     if (wclient && includeTxs)
-      await generateTxs({wclient, spvwclient, count, amount: 0.11111111});
+      await generateTxs({ wclient, spvwclient, count, amount: 0.11111111 });
 
     const blockhashes = await generateBlocks(1, nclient, coinbase);
     const block = await nclient.execute('getblock', [blockhashes[0]]);
@@ -316,5 +301,5 @@ module.exports = {
   generateReorg,
   generateRollback,
   generateTxs,
-  sendCoinbase
+  sendCoinbase,
 };
