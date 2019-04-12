@@ -24,7 +24,7 @@ Configuration options are the same as with bcoin. See more information
 Using from GitHub
 
 ```bash
-$ git clone https://github.com/bucko13/headernode
+$ git clone https://github.com/chainpoint/headernode
 $ cd headernode
 $ yarn install
 $ ./bin/headernode
@@ -175,8 +175,6 @@ a custom start point.
 - [ ] Fix or avoid tedious process of re-initializing chain from headers index when past lastCheckpoint
 - [ ] Non-deterministic problem where the node gets caught in an infinite loop resolving orphans
       after having synced to tip and the node restarts.
-
-## License
 
 ## License
 
