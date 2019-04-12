@@ -310,7 +310,7 @@ mined on the network', async () => {
 
   xit('should handle a reorg', () => {});
 
-  describe.only('HTTP/RPC', () => {
+  describe('HTTP/RPC', () => {
     let client;
     beforeEach(async () => {
       client = new NodeClient({
