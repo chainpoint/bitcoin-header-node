@@ -16,7 +16,7 @@ though further optimizations may be possible. The Header Indexer is based on a c
 for bcoin that separtes out the indexers (Tx, Address, and Compact Filters) into their own databases and exposes
 utilities for custom indexers.
 
-## Usage
+## Installation
 
 Configuration options are the same as with bcoin. See more information
 [here](https://github.com/bcoin-org/bcoin/blob/master/docs/configuration.md).
@@ -66,11 +66,11 @@ will also work. For a start-tip, you must pass in an array of two raw block head
 
 ## Header Node Client
 
-The Header Node comes built in with an HTTP server with a REST and RPC interface (on the backend it uses an
+The Header Node comes with a built-in HTTP server that includes both a REST API and RPC interface (on the backend it uses an
 extended instance of the [bweb](https://github.org/bcoin-org/bweb) object used in bcoin)
-You can use the `bclient` package to interact with your header node, which can be installed as a global package with npm or used directly in
-a script. Authentication is also supported on the node. A client that wishes to connect will need an API key if this is
-enabled.
+You can use the `bclient` package to interact with your header node, either installed as a global package with npm and used via CLI
+or used directly in a script. Authentication is also supported on the node. A client that wishes to connect will need
+an API key if this is enabled.
 
 (Read the [bcoin API docs](http://bcoin.io/api-docs/index.html) for more information on installing and setting up a client).
 
