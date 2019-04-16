@@ -10,12 +10,6 @@
     "test:watch": "mocha --reporter spec --watch test/*-test.js",
     "test:inspect": "mocha --reporter spec --inspect-brk --watch test/*-test.js"
   },
-  "lint-staged": {
-    "*.{js,json,css,jsx,scss}": [
-      "prettier --write",
-      "git add"
-    ]
-  },
   "author": "bucko",
   "license": "MIT",
   "bin": {
@@ -28,13 +22,26 @@
     "bfile": "^0.2.0",
     "bmutex": "^0.1.5",
     "bsert": "^0.0.9",
-    "bufio": "^1.0.5",
-    "prettier": "^1.16.4"
+    "bufio": "^1.0.5"
   },
   "devDependencies": {
     "eslint": "^5.15.1",
     "eslint-config-prettier": "^4.1.0",
     "eslint-plugin-prettier": "^3.0.1",
-    "mocha": "^6.0.2"
+    "husky": "^1.3.1",
+    "lint-staged": ">=8",
+    "mocha": "^6.0.2",
+    "prettier": "^1.17.0"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "**/*.js": [
+      "eslint --fix",
+      "git add"
+    ]
   }
 }
