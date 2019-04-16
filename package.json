@@ -5,8 +5,16 @@
   "main": "lib/index.js",
   "repository": "git://github.com/chainpoint/headernode.git",
   "scripts": {
-    "test": "mocha --reporter spec --watch test/*-test.js",
+    "lint": "eslint lib/*.js test/*.js",
+    "test": "mocha --reporter spec test/*-test.js",
+    "test:watch": "mocha --reporter spec --watch test/*-test.js",
     "test:inspect": "mocha --reporter spec --inspect-brk --watch test/*-test.js"
+  },
+  "lint-staged": {
+    "*.{js,json,css,jsx,scss}": [
+      "prettier --write",
+      "git add"
+    ]
   },
   "author": "bucko",
   "license": "MIT",
