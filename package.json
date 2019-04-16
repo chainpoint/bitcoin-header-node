@@ -5,9 +5,9 @@
   "main": "lib/index.js",
   "repository": "git://github.com/chainpoint/headernode.git",
   "scripts": {
-    "coverage": "nyc mocha",
+    "coverage": "nyc npm test && nyc report --reporter=text-lcov | coveralls",
     "lint": "eslint lib/*.js test/*.js",
-    "test": "mocha --reporter spec test/*-test.js",
+    "test": "nyc mocha --reporter spec test/*-test.js",
     "test:watch": "mocha --reporter spec --watch test/*-test.js",
     "test:inspect": "mocha --reporter spec --inspect-brk --watch test/*-test.js"
   },
@@ -27,6 +27,7 @@
     "bweb": "^0.1.8"
   },
   "devDependencies": {
+    "coveralls": "^3.0.3",
     "eslint": "^5.15.1",
     "eslint-config-prettier": "^4.1.0",
     "eslint-plugin-prettier": "^3.0.1",
