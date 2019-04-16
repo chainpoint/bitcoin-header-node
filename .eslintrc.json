@@ -7,6 +7,12 @@
   "parserOptions": {
     "ecmaVersion": 2018
   },
+  "overrides": {
+    "files": ["test/**/*-test.js"],
+    "env": {
+      "mocha": true
+    }
+  },
   "plugins": ["prettier"],
   "rules": {
     "prettier/prettier": "error",
