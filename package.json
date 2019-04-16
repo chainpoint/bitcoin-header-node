@@ -6,7 +6,7 @@
   "repository": "git://github.com/chainpoint/headernode.git",
   "scripts": {
     "lint": "eslint lib/*.js test/*.js",
-    "test": "mocha --reporter spec test/*-test.js",
+    "test": "npm run lint && mocha --reporter spec test/*-test.js",
     "test:watch": "mocha --reporter spec --watch test/*-test.js",
     "test:inspect": "mocha --reporter spec --inspect-brk --watch test/*-test.js"
   },
@@ -22,7 +22,8 @@
     "bfile": "^0.2.0",
     "bmutex": "^0.1.5",
     "bsert": "^0.0.9",
-    "bufio": "^1.0.5"
+    "bufio": "^1.0.5",
+    "bweb": "^0.1.8"
   },
   "devDependencies": {
     "eslint": "^5.15.1",

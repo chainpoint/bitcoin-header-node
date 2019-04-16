@@ -3,20 +3,21 @@
     "es6": true,
     "node": true
   },
-  "plugins": ["prettier"],
+  "extends": ["eslint:recommended", "plugin:prettier/recommended"],
   "parserOptions": {
-    "ecmaVersion": 9
+    "ecmaVersion": 2018
   },
-  "overrides": {
-    "files": ["test/**/*-test.js"],
-    "env": {
-      "mocha": true
-    }
-  },
-  "root": true,
   "plugins": ["prettier"],
   "rules": {
     "prettier/prettier": "error",
-    "no-unused-vars": "error"
+    "linebreak-style": ["error", "unix"],
+    "no-console": "off",
+    "camelcase": [
+      "error",
+      {
+        "properties": "never",
+        "ignoreDestructuring": true
+      }
+    ]
   }
 }

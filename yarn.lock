@@ -480,6 +480,14 @@ bval@~0.1.5:
   dependencies:
     bsert "~0.0.8"
 
+bweb@^0.1.8:
+  version "0.1.8"
+  resolved "https://registry.yarnpkg.com/bweb/-/bweb-0.1.8.tgz#dd174fca58ce88151d98f02d31399a43ac758fb6"
+  integrity sha512-xGMDbVf3JnLka7VTWOiy5GMersZcAuUMtd97zs7OUA/rrt2Z8bWVAwzCVPFxVzYMreYu7M+W3NZCJSpUdd7umA==
+  dependencies:
+    bsert "~0.0.10"
+    bsock "~0.1.8"
+
 bweb@~0.1.7:
   version "0.1.7"
   resolved "https://registry.yarnpkg.com/bweb/-/bweb-0.1.7.tgz#2eab0ed4d444d5afbeb227a30560e02f7584efaf"
