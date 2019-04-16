@@ -1,3 +1,10 @@
+[![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Build Status](https://travis-ci.org/chainpoint/headernode.svg?branch=master)](https://travis-ci.org/chainpoint/headernode)
+
+<!---[![npm](https://img.shields.io/npm/l/chainpoint-cli.svg)](https://www.npmjs.com/package/headernode)
+[![npm](https://img.shields.io/npm/v/chainpoint-cli.svg)](https://www.npmjs.com/package/headernode)-->
+
 # Bitcoin Header Node
 
 ##### A lightweight node for syncing header data w/ as little data as possible from the Bitcoin network
@@ -81,12 +88,12 @@ an API key if this is enabled.
 #### GET /header/:height
 
 ```js
-(async () => {
-  const height = 450000;
+;(async () => {
+  const height = 450000
   // these two requests are equivalent
-  await client.getBlock(height);
-  await client.get(`/header/${height}`);
-})();
+  await client.getBlock(height)
+  await client.get(`/header/${height}`)
+})()
 ```
 
 ##### HTTP Response
@@ -110,10 +117,10 @@ an API key if this is enabled.
 The RPC interface is also available
 
 ```js
-(async () => {
-  const height = 450000;
-  await client.execute('getblockheader', [height]);
-})();
+;(async () => {
+  const height = 450000
+  await client.execute('getblockheader', [height])
+})()
 ```
 
 ##### Response
