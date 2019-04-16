@@ -13,7 +13,7 @@ const {
   initWalletClient,
   initWallet,
   generateInitialBlocks,
-  generateBlocks,
+  generateBlocks
   // generateReorg,
 } = require('./util/regtest')
 
@@ -27,12 +27,12 @@ const ports = {
   full: {
     p2p: 49331,
     node: 49332,
-    wallet: 49333,
+    wallet: 49333
   },
   header: {
     p2p: 49431,
-    node: 49432,
-  },
+    node: 49432
+  }
 }
 
 describe('HeaderNode', function() {
@@ -56,7 +56,7 @@ describe('HeaderNode', function() {
     node = await initFullNode({
       ports,
       prefix: testPrefix,
-      logLevel: 'none',
+      logLevel: 'none'
     })
 
     headerNodeOptions = {
@@ -68,7 +68,7 @@ describe('HeaderNode', function() {
       logLevel: 'error',
       nodes: [`127.0.0.1:${ports.full.p2p}`],
       memory: false,
-      workers: true,
+      workers: true
     }
     headerNode = new HeaderNode(headerNodeOptions)
 
@@ -84,7 +84,7 @@ describe('HeaderNode', function() {
       wclient,
       coinbase,
       genesisTime,
-      blocks: initHeight,
+      blocks: initHeight
     })
     await headerNode.ensure()
     await headerNode.open()
@@ -139,11 +139,7 @@ mined on the network', async () => {
     const headerTip = await headerNode.getTip()
     const header = await headerNode.getHeader(headerTip.height)
 
-    assert.equal(
-      tip,
-      headerTip.height,
-      'Expected chain tip and header tip to be the same'
-    )
+    assert.equal(tip, headerTip.height, 'Expected chain tip and header tip to be the same')
     assert(header, 'Expected to get a header for the latest tip')
   })
 
@@ -159,11 +155,7 @@ mined on the network', async () => {
     let tip = await nclient.execute('getblockcount')
     headerTip = await headerNode.getTip()
 
-    assert.equal(
-      tip - count,
-      headerTip.height,
-      'Headers tip before sync should same as before blocks were mined'
-    )
+    assert.equal(tip - count, headerTip.height, 'Headers tip before sync should same as before blocks were mined')
 
     // reset the chain in case in-memory chain not picked up by GC
     await resetChain(headerNode)
@@ -171,11 +163,7 @@ mined on the network', async () => {
     headerTip = await headerNode.getTip()
     const header = await headerNode.getHeader(headerTip.height)
 
-    assert.equal(
-      headerTip.height,
-      tip,
-      'Expected chain tip and header tip to be the same'
-    )
+    assert.equal(headerTip.height, tip, 'Expected chain tip and header tip to be the same')
     assert(header, 'Expected to get a header for the latest tip after restart')
 
     // now check subscriptions are still working for new blocks
@@ -185,16 +173,9 @@ mined on the network', async () => {
 
     headerTip = await headerNode.getTip()
 
-    assert.equal(
-      tip,
-      headerTip.height,
-      'Expected chain tip and header tip to be the same after new blocks mined'
-    )
+    assert.equal(tip, headerTip.height, 'Expected chain tip and header tip to be the same after new blocks mined')
 
-    assert(
-      header,
-      'Expected to get a header for the latest tip after blocks mined'
-    )
+    assert(header, 'Expected to get a header for the latest tip after blocks mined')
   })
 
   it('should support checkpoints', async () => {
@@ -223,22 +204,12 @@ mined on the network', async () => {
     // resetting chain db to clear from memory
     await resetChain(headerNode, checkpoint.height - count)
 
-    const historicalEntry = await headerNode.chain.getEntryByHeight(
-      checkpoint.height - 2
-    )
+    const historicalEntry = await headerNode.chain.getEntryByHeight(checkpoint.height - 2)
 
-    const checkpointEntry = await headerNode.chain.getEntryByHeight(
-      checkpoint.height + count - 1
-    )
+    const checkpointEntry = await headerNode.chain.getEntryByHeight(checkpoint.height + count - 1)
 
-    assert(
-      !historicalEntry,
-      'Expected there to be no entry for height earlier than checkpoint'
-    )
-    assert(
-      checkpointEntry,
-      'Expected there to be an entry for height after checkpoint'
-    )
+    assert(!historicalEntry, 'Expected there to be no entry for height earlier than checkpoint')
+    assert(checkpointEntry, 'Expected there to be an entry for height after checkpoint')
   })
 
   it('should support fast sync with custom starting header', async () => {
@@ -259,7 +230,7 @@ mined on the network', async () => {
       port: ports.header.p2p + 10,
       httpPort: ports.header.node + 10,
       startTip: startTip,
-      memory: true,
+      memory: true
     }
 
     // set a custom lastCheckpoint to confirm it can sync past it
@@ -284,14 +255,8 @@ mined on the network', async () => {
     const oldHeader = await fastNode.getHeader(startHeight - 1)
     const newHeader = await fastNode.getHeader(startHeight + 5)
 
-    assert(
-      !oldHeader,
-      'Did not expect to see an earlier block than the start height'
-    )
-    assert(
-      newHeader,
-      'Expected to be able to retrieve a header later than start point'
-    )
+    assert(!oldHeader, 'Did not expect to see an earlier block than the start height')
+    assert(newHeader, 'Expected to be able to retrieve a header later than start point')
 
     // let's just test that it can reconnect
     // after losing its in-memory chain
@@ -300,11 +265,7 @@ mined on the network', async () => {
     const tip = await nclient.execute('getblockcount')
     const fastTip = await fastNode.getTip()
 
-    assert.equal(
-      tip,
-      fastTip.height,
-      'expected tips to be in sync after "restart"'
-    )
+    assert.equal(tip, fastTip.height, 'expected tips to be in sync after "restart"')
     fastNode.setCustomCheckpoint()
   })
 
@@ -315,7 +276,7 @@ mined on the network', async () => {
     beforeEach(async () => {
       client = new NodeClient({
         port: ports.header.node,
-        apiKey: headerNodeOptions.apiKey,
+        apiKey: headerNodeOptions.apiKey
       })
       await client.open()
     })
@@ -328,11 +289,7 @@ mined on the network', async () => {
       const info = await client.getInfo()
       const rpcInfo = await client.execute('getinfo')
       const chain = headerNode.chain
-      assert.equal(
-        info.chain.height,
-        chain.height,
-        'Expected to get back chain height from info endpoint'
-      )
+      assert.equal(info.chain.height, chain.height, 'Expected to get back chain height from info endpoint')
       assert(rpcInfo)
     })
 
@@ -377,10 +334,7 @@ mined on the network', async () => {
       await sleep(500)
 
       tip = await client.getTip()
-      assert(
-        entry,
-        'Did not get an entry from a chain connect event after mining a block'
-      )
+      assert(entry, 'Did not get an entry from a chain connect event after mining a block')
 
       assert.equal(revHex(entry.hash), revHex(ChainEntry.fromRaw(tip).hash))
     })

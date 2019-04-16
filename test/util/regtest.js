@@ -28,9 +28,9 @@ async function initFullNode(options) {
     memory: false,
     plugins: [require('bcoin/lib/wallet/plugin')],
     env: {
-      BCOIN_WALLET_HTTP_PORT: options.ports.full.wallet.toString(),
+      BCOIN_WALLET_HTTP_PORT: options.ports.full.wallet.toString()
     },
-    logLevel: options.logLevel,
+    logLevel: options.logLevel
   })
   await node.ensure()
   await node.open()
@@ -54,9 +54,9 @@ async function initSPVNode(options) {
     memory: false,
     plugins: [require('../../lib/wallet/plugin')],
     env: {
-      BCOIN_WALLET_HTTP_PORT: options.ports.spv.wallet.toString(),
+      BCOIN_WALLET_HTTP_PORT: options.ports.spv.wallet.toString()
     },
-    logLevel: options.logLevel,
+    logLevel: options.logLevel
   })
 
   await node.ensure()
@@ -70,7 +70,7 @@ async function initNodeClient(options) {
   const nclient = new NodeClient({
     network: 'regtest',
     port: options.ports.node,
-    apiKey: 'foo',
+    apiKey: 'foo'
   })
   await nclient.open()
   return nclient
@@ -80,7 +80,7 @@ async function initWalletClient(options) {
   const wclient = new WalletClient({
     network: 'regtest',
     port: options.ports.wallet,
-    apiKey: 'foo',
+    apiKey: 'foo'
   })
   await wclient.open()
   return wclient
@@ -97,7 +97,7 @@ async function initWallet(wclient) {
   // broadcast to spv node wallets.
   const info = await wallet.createAccount('blue', {
     witness: true,
-    lookahead: 40,
+    lookahead: 40
   })
   assert(info.initialized)
   assert.strictEqual(info.name, 'blue')
@@ -174,7 +174,7 @@ async function generateReorg(depth, nclient, wclient, coinbase) {
   return {
     invalidated,
     validated,
-    txids,
+    txids
   }
 }
 
@@ -217,13 +217,13 @@ async function sendCoinbase(options) {
       value: 5000000000,
       script: script,
       hash: prevhash,
-      index: 0,
+      index: 0
     })
   )
 
   mtx.addOutput({
     address: address,
-    value: 4999000000,
+    value: 4999000000
   })
 
   mtx.sign(coinbaseKey)
@@ -266,8 +266,7 @@ async function generateInitialBlocks(options) {
     if (c % 5) blocktime -= timewarp
     await nclient.execute('setmocktime', [blocktime])
 
-    if (wclient && includeTxs)
-      await generateTxs({ wclient, spvwclient, count, amount: 0.11111111 })
+    if (wclient && includeTxs) await generateTxs({ wclient, spvwclient, count, amount: 0.11111111 })
 
     const blockhashes = await generateBlocks(1, nclient, coinbase)
     const block = await nclient.execute('getblock', [blockhashes[0]])
@@ -301,5 +300,5 @@ module.exports = {
   generateReorg,
   generateRollback,
   generateTxs,
-  sendCoinbase,
+  sendCoinbase
 }
