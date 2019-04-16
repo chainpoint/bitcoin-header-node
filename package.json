@@ -6,7 +6,7 @@
   "repository": "git://github.com/chainpoint/headernode.git",
   "scripts": {
     "lint": "eslint lib/*.js test/*.js",
-    "test": "npm run lint && mocha --reporter spec test/*-test.js",
+    "test": "mocha --reporter spec test/*-test.js",
     "test:watch": "mocha --reporter spec --watch test/*-test.js",
     "test:inspect": "mocha --reporter spec --inspect-brk --watch test/*-test.js"
   },
