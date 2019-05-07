@@ -1,0 +1,17 @@
+version: '3'
+services:
+  headernode:
+    build: .
+    environment:
+      BCOIN_HTTP_HOST: 0.0.0.0
+      # uncomment to set an api key or add `BCOIN_NO_AUTH:'true'`
+      # BCOIN_API_KEY: my-api-key
+    ports:
+      #-- Mainnet
+      - '8333:8333'
+      - '8332:8332' # RPC
+      - '8334:8334' # Wallet
+      #-- Testnet
+      - '18333:18333'
+      - '18332:18332' # RPC
+      - '18334:18334' # Wallet
