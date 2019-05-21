@@ -86,5 +86,26 @@ describe('utils', () => {
         else throw e
       }
     })
+
+    it('should throw without passing in a network as first arg', async () => {
+      let failed = false
+      try {
+        await utils.getRemoteBlockEntries(...heights)
+      } catch (e) {
+        failed = true
+      }
+
+      assert(failed, 'expected it to fail when not passing in a network first arg')
+
+      failed = false
+
+      try {
+        await utils.getRemoteBlockEntries('mainnet', ...heights)
+      } catch (e) {
+        failed = true
+      }
+
+      assert(failed, 'expected it to fail when not passing in "main" or "testnet" as first arg')
+    })
   })
 })
