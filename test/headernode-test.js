@@ -350,7 +350,14 @@ async function resetChain(node, start = 0) {
   // can't always reset to 0 because `chaindb.reset`
   // won't work when there is a custom start point
   // because chain "rewind" won't work
+
+  // need to turn off `targetReset` for pow to avoid unecessary
+  // check when resetting the chain for testing purposes
+  let targetReset = node.network.pow.targetReset
+  node.network.pow.targetReset = false
   await node.chain.db.reset(start)
+  node.network.pow.targetReset = targetReset
+
   await node.close()
   await node.open()
   await node.connect()
