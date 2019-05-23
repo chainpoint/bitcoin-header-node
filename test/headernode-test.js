@@ -35,7 +35,7 @@ const ports = {
   }
 }
 
-describe.only('HeaderNode', function() {
+describe('HeaderNode', function() {
   this.timeout(30000)
   let node = null
   let headerNode = null
@@ -86,6 +86,11 @@ describe.only('HeaderNode', function() {
       genesisTime,
       blocks: initHeight
     })
+
+    // need to turn off the targetReset to avoid pow bit checks
+    // that need older blocks. This is only an issue for testnet which has different
+    // retargeting rules and can be avoided by not starting sync past the lastCheckpoint
+    headerNode.network.pow.targetReset = false
     await headerNode.ensure()
     await headerNode.open()
     await headerNode.connect()
@@ -101,6 +106,8 @@ describe.only('HeaderNode', function() {
     await headerNode.close()
     await rimraf(testPrefix)
     await rimraf(headerTestPrefix)
+
+    headerNode.network.pow.targetReset = true
 
     // clear checkpoint information on bcoin module
     if (node.network.lastCheckpoint) headerNode.setCustomCheckpoint()
@@ -352,9 +359,7 @@ async function resetChain(node, start = 0) {
 
   // need to turn off `targetReset` for pow to avoid unecessary
   // check when resetting the chain for testing purposes
-  node.network.pow.targetReset = false
   await node.chain.db.reset(start)
-
   await node.close()
   await node.open()
   await node.connect()
@@ -362,5 +367,4 @@ async function resetChain(node, start = 0) {
 
   // let indexer catch up
   await sleep(500)
-  node.network.pow.targetReset = true
 }
