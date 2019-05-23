@@ -218,13 +218,20 @@ mined on the network', async () => {
     assert(checkpointEntry, 'Expected there to be an entry for height after checkpoint')
   })
 
-  it('should support fast sync with custom starting header', async () => {
+  it('should support custom starting header where lastCheckpoint - startHeight < retargetInterval', async () => {
     // need to reset checkpoints otherwise causes issues for creating a new node
     if (node.network.lastCheckpoint) headerNode.setCustomCheckpoint()
 
+    // in order to test that pow checks will work, we need to mine past a retarget interval
+    // to test that the start point is adjusted accordingly. If we don't have at least one retarget
+    // block then it will adjust back to genesis
+    // note that this makes the tests take a much longer time
+    await generateBlocks(headerNode.network.pow.retargetInterval + 20, nclient, coinbase)
+
     // arbitrary block to start our new node's chain from
     // creating a tip with two blocks (prev and tip)
-    const startHeight = 50
+    const chainTip = await node.chain.db.getTip()
+    const startHeight = chainTip['height'] - 50
     const startTip = []
     let entry = await node.chain.getEntryByHeight(startHeight)
     startTip.push(entry.toRaw('hex'))
@@ -252,6 +259,15 @@ mined on the network', async () => {
     fastNode = new HeaderNode(options)
 
     fastNode.setCustomCheckpoint(checkpointEntry.height, checkpointEntry.hash)
+    const {
+      pow: { retargetInterval },
+      lastCheckpoint
+    } = fastNode.network
+
+    assert(
+      lastCheckpoint - startHeight < retargetInterval,
+      'Problem setting up the test. Expected start height to before the last checkpoint but after a retarget'
+    )
     await fastNode.ensure()
     await fastNode.open()
     await fastNode.connect()
