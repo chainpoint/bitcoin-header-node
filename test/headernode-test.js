@@ -35,7 +35,7 @@ const ports = {
   }
 }
 
-describe('HeaderNode', function() {
+describe.only('HeaderNode', function() {
   this.timeout(30000)
   let node = null
   let headerNode = null
@@ -172,8 +172,7 @@ mined on the network', async () => {
     tip = await nclient.execute('getblockcount')
 
     headerTip = await headerNode.getTip()
-
-    assert.equal(tip, headerTip.height, 'Expected chain tip and header tip to be the same after new blocks mined')
+    assert.equal(headerTip.height, tip, 'Expected chain tip and header tip to be the same after new blocks mined')
 
     assert(header, 'Expected to get a header for the latest tip after blocks mined')
   })
@@ -353,10 +352,9 @@ async function resetChain(node, start = 0) {
 
   // need to turn off `targetReset` for pow to avoid unecessary
   // check when resetting the chain for testing purposes
-  let targetReset = node.network.pow.targetReset
   node.network.pow.targetReset = false
   await node.chain.db.reset(start)
-  node.network.pow.targetReset = targetReset
+  node.network.pow.targetReset = true
 
   await node.close()
   await node.open()
