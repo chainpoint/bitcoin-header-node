@@ -154,19 +154,27 @@ $ yarn test
 
 ## Notes
 
-If the initial sync is interrupted and restarted, you may notice your logs (if they are on)
-spitting out a bunch of messages about blocks being re-added to the chain.
-This is the in-memory chain getting re-initialized from the headersindex. This is necessary
-for blocks after the network's lastCheckpoint since the chain db is used for certain contextual checks
-when syncing a node, for example handling re-orgs and orphan blocks. We take the header index data that is persisted
-and add these to the chain db so that they are available for these operations.
+- If the initial sync is interrupted and restarted, you may notice your logs (if they are on)
+  spitting out a bunch of messages about blocks being re-added to the chain.
+  This is the in-memory chain getting re-initialized from the headersindex. This is necessary
+  for blocks after the network's lastCheckpoint since the chain db is used for certain contextual checks
+  when syncing a node, for example handling re-orgs and orphan blocks. We take the header index data that is persisted
+  and add these to the chain db so that they are available for these operations.
 
-The HeaderIndexer takes the place of the chain in several places for the Header Node to avoid some of this
-reliance on the chain which we are not persisting. The custom `HeaderPool` is extended from bcoin's default `Pool` object
-to replace calls to methods normally done by the chain that won't work given that there is no chain (or in the case
-of a custom start point, not even a proper genesis block). The best example is `getLocator` which normally gets block hashes
-all the way back to genesis on the chain, but in our case will run the checks on the header index, and stop early if using
-a custom start point.
+- The HeaderIndexer takes the place of the chain in several places for the Header Node to avoid some of this
+  reliance on the chain which we are not persisting. The custom `HeaderPool` is extended from bcoin's default `Pool` object
+  to replace calls to methods normally done by the chain that won't work given that there is no chain (or in the case
+  of a custom start point, not even a proper genesis block). The best example is `getLocator` which normally gets block hashes
+  all the way back to genesis on the chain, but in our case will run the checks on the header index, and stop early if using
+  a custom start point.
+
+- In the unlikely case that you are using a header node on regtest or simnet (such as in the unit tests),
+  it is not recommended to use a custom start height. The reason is that there are some different PoW bits checks that are done
+  for testing networks to account for variance in mining hash power. So in a situation where there are no checkpoints or you're
+  starting your node _after_ the lastCheckpoint (which is zero for regtest/simnet), the chain will search backwards for old blocks
+  to confirm proof of work even if not in a new retargeting interval. If your start height is in between intervals in this situation,
+  the loop will eventually look for a block that isn't in your db and fail. This is circumvented in the unit tests by turning off
+  `headernode.network.pow.targetReset` to skip this check allowing us to test custom checkpoints and start heights.
 
 ## TODO:
 
