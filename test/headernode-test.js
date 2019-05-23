@@ -354,7 +354,6 @@ async function resetChain(node, start = 0) {
   // check when resetting the chain for testing purposes
   node.network.pow.targetReset = false
   await node.chain.db.reset(start)
-  node.network.pow.targetReset = true
 
   await node.close()
   await node.open()
@@ -363,4 +362,5 @@ async function resetChain(node, start = 0) {
 
   // let indexer catch up
   await sleep(500)
+  node.network.pow.targetReset = true
 }
