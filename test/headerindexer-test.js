@@ -1,7 +1,7 @@
 'use strict'
 
 const assert = require('bsert')
-const { Chain, protocol, Miner, Headers } = require('bcoin')
+const { Chain, protocol, Miner, Headers, ChainEntry } = require('bcoin')
 
 const { sleep } = require('./util/common')
 const HeaderIndexer = require('../lib/headerindexer')
@@ -54,11 +54,14 @@ describe('HeaderIndexer', () => {
   })
 
   after(async () => {
-    // in case something failed, reset lastCheckpoint to 0
-    if (indexer.network.lastCheckpoint) indexer.setCustomCheckpoint()
     await indexer.close()
     await chain.close()
     await miner.close()
+  })
+
+  afterEach(() => {
+    // in case something failed, reset lastCheckpoint to 0
+    if (indexer.network.lastCheckpoint) indexer.setCustomCheckpoint()
   })
 
   it('should create a new HeaderIndexer', async () => {
@@ -95,6 +98,77 @@ describe('HeaderIndexer', () => {
     assert(
       !Object.keys(network.checkpointMap).length,
       'checkpointMap should clear when no args are passed to setCustomCheckpoint'
+    )
+  })
+
+  it('should move a startHeight that is between last retarget and lastCheckpoint to the retarget block', async () => {
+    const checkpoint = await chain.getEntryByHeight(5)
+    const {
+      pow: { retargetInterval }
+    } = indexer.network
+
+    // this is a change that will effect all other tests since they share the same instance bcoin
+    // setting this somewhat arbitrarily since this is just testing the initialization of the chain
+    // would not sync correctly since the block at this height doesn't exist
+    indexer.setCustomCheckpoint(retargetInterval * 2.5, checkpoint.hash)
+
+    const newOptions = { ...options, startHeight: retargetInterval * 2.25, chain }
+    let fastIndexer = new HeaderIndexer(newOptions)
+    const { lastCheckpoint } = fastIndexer.network
+
+    // confirm that our various bootstrapping checkpoints are placed correctly
+    assert(
+      lastCheckpoint - newOptions.startHeight < retargetInterval &&
+        lastCheckpoint - (lastCheckpoint % retargetInterval),
+      'Problem setting up the test. Expected start height to before the last checkpoint but after a retarget'
+    )
+
+    const expectedStart = lastCheckpoint - (lastCheckpoint % retargetInterval)
+    assert.equal(
+      fastIndexer.startHeight,
+      expectedStart,
+      'indexer start height should have been adjusted back to the last retargetInterval'
+    )
+  })
+
+  it('should throw if a startTip is between last retarget height and last checkpoint', async () => {
+    // somewhat arbitrary, just need block data for testing, will be updated
+    // and not valid blocks
+    const checkpoint = await chain.getEntryByHeight(5)
+    const startEntry = await chain.getEntryByHeight(6)
+
+    const {
+      pow: { retargetInterval }
+    } = indexer.network
+
+    // this is a change that will effect all other tests since they share the same instance bcoin
+    // setting this somewhat arbitrarily since this is just testing the initialization of the chain
+    // would not sync correctly since the block at this height doesn't exist
+    indexer.setCustomCheckpoint(retargetInterval * 2.5, checkpoint.hash)
+
+    const { lastCheckpoint } = indexer.network
+    // doesn't matter that this block isn't valid, the only test that should be run on initialization is
+    // the serialization and the height. The height should be after last retarget and before lastCheckpoint
+    const maxStart = lastCheckpoint - (lastCheckpoint % retargetInterval)
+    startEntry.height = maxStart + 1
+    const secondBlock = ChainEntry.fromRaw(startEntry.toRaw())
+    secondBlock.height = startEntry.height + 1
+
+    const newOptions = { ...options, startTip: [startEntry.toRaw(), secondBlock.toRaw()] }
+
+    let failed = false
+    let message
+    try {
+      new HeaderIndexer(newOptions)
+    } catch (e) {
+      failed = true
+      message = e.message
+    }
+
+    assert(failed, 'Expected HeaderIndexer initialization to fail')
+    assert(
+      message.includes('retarget') && message.includes(maxStart.toString()),
+      'Expected failure message to mention retarget interval and suggest a new height.'
     )
   })
 

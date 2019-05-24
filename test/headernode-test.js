@@ -90,7 +90,7 @@ describe('HeaderNode', function() {
     // need to turn off the targetReset to avoid pow bit checks
     // that need older blocks. This is only an issue for testnet which has different
     // retargeting rules and can be avoided by not starting sync past the lastCheckpoint
-    headerNode.network.pow.targetReset = false
+    // headerNode.network.pow.targetReset = false
     await headerNode.ensure()
     await headerNode.open()
     await headerNode.connect()
@@ -107,7 +107,7 @@ describe('HeaderNode', function() {
     await rimraf(testPrefix)
     await rimraf(headerTestPrefix)
 
-    headerNode.network.pow.targetReset = true
+    // headerNode.network.pow.targetReset = true
 
     // clear checkpoint information on bcoin module
     if (node.network.lastCheckpoint) headerNode.setCustomCheckpoint()
@@ -184,7 +184,7 @@ mined on the network', async () => {
     assert(header, 'Expected to get a header for the latest tip after blocks mined')
   })
 
-  it('should support checkpoints', async () => {
+  it.only('should support checkpoints', async () => {
     // header index needs to maintain chain from the last checkpoint
     // this test will set a checkpoint for our regtest network
     // reset the headernode chain similar to the previous test
@@ -199,7 +199,7 @@ mined on the network', async () => {
     await sleep(500)
 
     await headerNode.disconnect()
-
+    headerNode.network.pow.retargetInterval = 5
     // mine some blocks while header node is offline
     await generateBlocks(count, nclient, coinbase)
     await sleep(500)
@@ -211,7 +211,10 @@ mined on the network', async () => {
     await resetChain(headerNode, checkpoint.height - count)
 
     const historicalEntry = await headerNode.chain.getEntryByHeight(checkpoint.height - 2)
-
+    let tip = await headerNode.getTip()
+    console.log('tip:', tip)
+    console.log('checkpoint (old tip)', checkpoint)
+    console.log('headerNode.startHeight:', headerNode.startHeight)
     const checkpointEntry = await headerNode.chain.getEntryByHeight(checkpoint.height + count - 1)
 
     assert(!historicalEntry, 'Expected there to be no entry for height earlier than checkpoint')
@@ -219,19 +222,38 @@ mined on the network', async () => {
   })
 
   it('should support custom starting header where lastCheckpoint - startHeight < retargetInterval', async () => {
+    const {
+      pow: { retargetInterval }
+    } = node.network
+
     // need to reset checkpoints otherwise causes issues for creating a new node
     if (node.network.lastCheckpoint) headerNode.setCustomCheckpoint()
 
     // in order to test that pow checks will work, we need to mine past a retarget interval
     // to test that the start point is adjusted accordingly. If we don't have at least one retarget
     // block then it will adjust back to genesis
-    // note that this makes the tests take a much longer time
-    await generateBlocks(headerNode.network.pow.retargetInterval + 20, nclient, coinbase)
+    // note that this makes the tests take a much longer time since 2016 blocks need to be mined
+    // const chainHeight = retargetInterval + 20
+    await generateBlocks(20, nclient, coinbase)
+    const chainHeight = await nclient.execute('getblockcount')
 
-    // arbitrary block to start our new node's chain from
-    // creating a tip with two blocks (prev and tip)
-    const chainTip = await node.chain.db.getTip()
-    const startHeight = chainTip['height'] - 50
+    // set a custom lastCheckpoint for testing since regtest has none
+    let checkpointEntry = await node.chain.getEntryByHeight(chainHeight - 10)
+    assert(checkpointEntry, 'Problem finding checkpoint block')
+    assert(
+      checkpointEntry.height < chainHeight && checkpointEntry.height - retargetInterval > 0,
+      'Problem setting up the test. Checkpoint height should be less than the chain tip and after at least 1 retarget'
+    )
+
+    // NOTE: since the functionality to start at a later height
+    // involves mutating the `networks`` module's lastCheckpoint
+    // this will impact all other nodes involved in tests since
+    // they all share the same bcoin instance]
+    headerNode.setCustomCheckpoint(checkpointEntry.height, checkpointEntry.hash)
+
+    // starting block must less than lastCheckpoint and less than or equal to a retargeting interval
+    // this sets the starting height to the last retargeting interval before the lastCheckpoint
+    const startHeight = checkpointEntry.height - (checkpointEntry.height % retargetInterval)
     const startTip = []
     let entry = await node.chain.getEntryByHeight(startHeight)
     startTip.push(entry.toRaw('hex'))
@@ -246,39 +268,20 @@ mined on the network', async () => {
       memory: true
     }
 
-    // set a custom lastCheckpoint to confirm it can sync past it
-    let checkpointEntry = await node.chain.getEntryByHeight(startHeight + 10)
-    assert(checkpointEntry, 'Problem finding checkpoint block')
-
-    // NOTE: since the functionality to start at a later height
-    // involves mutating the networks module's lastCheckpoint
-    // this will impact all other nodes involved in tests since
-    // they all share the same bcoin instance
-    // This only happens on `open` for a start point that
-    // is after the network's lastCheckpoint (which is zero for regtest)
     fastNode = new HeaderNode(options)
 
-    fastNode.setCustomCheckpoint(checkpointEntry.height, checkpointEntry.hash)
-    const {
-      pow: { retargetInterval },
-      lastCheckpoint
-    } = fastNode.network
-
-    assert(
-      lastCheckpoint - startHeight < retargetInterval,
-      'Problem setting up the test. Expected start height to before the last checkpoint but after a retarget'
-    )
+    // startup and sync our fastNode with custom start heiht
     await fastNode.ensure()
     await fastNode.open()
     await fastNode.connect()
     await fastNode.startSync()
     await sleep(500)
 
-    const oldHeader = await fastNode.getHeader(startHeight - 1)
-    const newHeader = await fastNode.getHeader(startHeight + 5)
+    const beforeStartHeight = await fastNode.getHeader(startHeight - 1)
+    const afterStartHeight = await fastNode.getHeader(startHeight + 5)
 
-    assert(!oldHeader, 'Did not expect to see an earlier block than the start height')
-    assert(newHeader, 'Expected to be able to retrieve a header later than start point')
+    assert(!beforeStartHeight, 'Did not expect to see an earlier block than the start height')
+    assert(afterStartHeight, 'Expected to be able to retrieve a header later than start point')
 
     // let's just test that it can reconnect
     // after losing its in-memory chain
@@ -373,8 +376,6 @@ async function resetChain(node, start = 0) {
   // won't work when there is a custom start point
   // because chain "rewind" won't work
 
-  // need to turn off `targetReset` for pow to avoid unecessary
-  // check when resetting the chain for testing purposes
   await node.chain.db.reset(start)
   await node.close()
   await node.open()
@@ -382,5 +383,5 @@ async function resetChain(node, start = 0) {
   await node.startSync()
 
   // let indexer catch up
-  await sleep(500)
+  await sleep(1000)
 }
