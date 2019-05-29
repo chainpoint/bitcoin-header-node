@@ -3,7 +3,7 @@
 const assert = require('bsert')
 const { Chain, protocol, Miner, Headers, ChainEntry } = require('bcoin')
 
-const { sleep } = require('./util/common')
+const { sleep, setCustomCheckpoint } = require('./util/common')
 const HeaderIndexer = require('../lib/headerindexer')
 
 const { Network } = protocol
@@ -61,7 +61,7 @@ describe('HeaderIndexer', () => {
 
   afterEach(() => {
     // in case something failed, reset lastCheckpoint to 0
-    if (indexer.network.lastCheckpoint) indexer.setCustomCheckpoint()
+    if (indexer.network.lastCheckpoint) setCustomCheckpoint(indexer)
   })
 
   it('should create a new HeaderIndexer', async () => {
@@ -87,13 +87,13 @@ describe('HeaderIndexer', () => {
     const checkpoint = await chain.getEntryByHeight(5)
     assert(checkpoint)
 
-    indexer.setCustomCheckpoint(checkpoint.height, checkpoint.hash)
+    setCustomCheckpoint(indexer, checkpoint.height, checkpoint.hash)
 
     assert.equal(indexer.network.lastCheckpoint, checkpoint.height, `Indexer's network's lastCheckpoint didn't match`)
     assert.equal(indexer.network.checkpointMap[checkpoint.height], checkpoint.hash, `Indexer's network's  didn't match`)
 
     // reset checkpoints
-    indexer.setCustomCheckpoint()
+    setCustomCheckpoint(indexer)
     assert(!network.lastCheckpoint, 'lastCheckpoint should clear when no args are passed to setCustomCheckpoint')
     assert(
       !Object.keys(network.checkpointMap).length,
@@ -110,7 +110,7 @@ describe('HeaderIndexer', () => {
     // this is a change that will effect all other tests since they share the same instance bcoin
     // setting this somewhat arbitrarily since this is just testing the initialization of the chain
     // would not sync correctly since the block at this height doesn't exist
-    indexer.setCustomCheckpoint(retargetInterval * 2.5, checkpoint.hash)
+    setCustomCheckpoint(indexer, retargetInterval * 2.5, checkpoint.hash)
 
     const newOptions = { ...options, startHeight: retargetInterval * 2.25, chain }
     let fastIndexer = new HeaderIndexer(newOptions)
@@ -144,7 +144,7 @@ describe('HeaderIndexer', () => {
     // this is a change that will effect all other tests since they share the same instance bcoin
     // setting this somewhat arbitrarily since this is just testing the initialization of the chain
     // would not sync correctly since the block at this height doesn't exist
-    indexer.setCustomCheckpoint(retargetInterval * 2.5, checkpoint.hash)
+    setCustomCheckpoint(indexer, retargetInterval * 2.5, checkpoint.hash)
 
     const { lastCheckpoint } = indexer.network
     // doesn't matter that this block isn't valid, the only test that should be run on initialization is

@@ -154,7 +154,7 @@ $ yarn test
 
 ## Notes
 
-- If the initial sync is interrupted and restarted, you may notice your logs (if they are on)
+- If the initial sync is interrupted and restarted, you may notice your logs (if they are on and set to level "spam")
   spitting out a bunch of messages about blocks being re-added to the chain.
   This is the in-memory chain getting re-initialized from the headersindex. This is necessary
   for blocks after the network's lastCheckpoint since the chain db is used for certain contextual checks
@@ -169,12 +169,13 @@ $ yarn test
   a custom start point.
 
 - In the unlikely case that you are using a header node on regtest or simnet (such as in the unit tests),
-  it is not recommended to use a custom start height. The reason is that there are some different PoW bits checks that are done
+  it is not recommended to use a custom start height. The reason is that there are some different PoW checks that are done
   for testing networks to account for variance in mining hash power. So in a situation where there are no checkpoints or you're
   starting your node _after_ the lastCheckpoint (which is zero for regtest/simnet), the chain will search backwards for old blocks
-  to confirm proof of work even if not in a new retargeting interval. If your start height is in between intervals in this situation,
-  the loop will eventually look for a block that isn't in your db and fail. This is circumvented in the unit tests by turning off
-  `headernode.network.pow.targetReset` to skip this check allowing us to test custom checkpoints and start heights.
+  to confirm proof of work even if not in a new retargeting interval. Start height initialization will typically account for this
+  on testnet and mainnet for example, but since regtest does not have a lastCheckpoint, this can make behavior a little weird.
+  For the tests, to confirm that the start height functionality works with checkpoints, we adjust the retarget interval down and
+  set a custom lastCheckpoint rather than having to mine over 2k blocks which would slow the tests down.
 
 ## TODO:
 

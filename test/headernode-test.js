@@ -5,7 +5,7 @@ const { Network, ChainEntry, networks } = require('bcoin')
 const { NodeClient } = require('bclient')
 
 const HeaderNode = require('../lib/headernode')
-const { rimraf, sleep } = require('./util/common')
+const { rimraf, sleep, setCustomCheckpoint } = require('./util/common')
 const { revHex, fromRev } = require('../lib/util')
 const {
   initFullNode,
@@ -32,23 +32,6 @@ const ports = {
   header: {
     p2p: 49431,
     node: 49432
-  }
-}
-
-function setCustomCheckpoint(node, height = 0, hash) {
-  assert(!hash || Buffer.isBuffer(hash), 'Must pass in a buffer for checkpoint hash')
-  node.logger.info('Setting custom lastCheckpoint as %d (checkpoint=%h)', height, hash)
-  node.network.lastCheckpoint = height
-  if (height) {
-    node.network.checkpointMap[height] = hash
-    node.network.checkpoints.push({ hash, height })
-    node.network.checkpoints.sort((a, b) => a.height - b.height)
-  } else {
-    // if lastCheckpoint height is zero then clear checkpoint map
-    node.logger.debug('Empty height passed to setCustomCheckpoint')
-    node.logger.debug("Clearing %s network's checkpoint map", node.network.type)
-    node.network.checkpointMap = {}
-    node.network.checkpoints = []
   }
 }
 
@@ -249,7 +232,7 @@ mined on the network', async () => {
     assert(entry, 'Expected there to be a chain entry for non-historical heights')
   })
 
-  it('should support custom starting header where lastCheckpoint - startHeight < retargetInterval', async () => {
+  it('should support custom starting header where startHeight is less than lastCheckpoint and greater than at least 1 retarget', async () => {
     // in order to test that pow checks will work, we need to mine past a retarget interval
     // to test that the start point is adjusted accordingly. If we don't have at least one retarget
     // block then it will adjust back to genesis
@@ -305,7 +288,7 @@ mined on the network', async () => {
     const fastTip = await fastNode.getTip()
 
     assert.equal(fastTip.height, tip, 'expected tips to be in sync after "restart"')
-    fastNode.setCustomCheckpoint()
+    setCustomCheckpoint(fastNode)
   })
 
   xit('should handle a reorg', () => {})
