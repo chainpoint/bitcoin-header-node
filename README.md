@@ -184,13 +184,13 @@ $ yarn test
       initial sync and reduce db size further)
 - [x] Try and get rid of the locator error in `net` (can be fixed if `getLocator` returns array of just start hash)
 - [ ] Investigate other performance improvements such as [compressed headers](https://github.com/RCasatta/compressedheaders)
-- [ ] A header chain with custom start point currently can't handle a chain db reset.
+- [x] A header chain with custom start point currently can't handle a chain db reset.
       This should be made more robust, even if just throwing an error.
       This weakness can be demonstrated in the fast sync test for headernode,
       where the chain is reset. Reset chain db to 0 and the method will throw
       because it can't rewind the chain properly.
 - [ ] Fix or avoid tedious process of re-initializing chain from headers index when past lastCheckpoint
-- [ ] Non-deterministic problem where the node gets caught in an infinite loop resolving orphans
+- [x] Non-deterministic problem where the node gets caught in an infinite loop resolving orphans
       after having synced to tip and the node restarts.
 
 ## License
