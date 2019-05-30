@@ -1,7 +1,7 @@
 'use strict'
 const assert = require('bsert')
 
-const { Network, ChainEntry, networks } = require('bcoin')
+const { Network, ChainEntry, networks, Headers } = require('bcoin')
 const { NodeClient } = require('bclient')
 
 const HeaderNode = require('../lib/headernode')
@@ -138,7 +138,7 @@ describe('HeaderNode', function() {
 
       if (!header) throw new Error(`No header in the index for block ${i}`)
 
-      assert.equal(header.hash().toString('hex'), entry.hash.toString('hex'))
+      assert.equal(header.rhash(), entry.rhash())
     }
   })
 
@@ -209,27 +209,17 @@ mined on the network', async () => {
 
     // resetting chain db to clear from memory
     await resetChain(headerNode, lastCheckpoint + 1)
+    const testHeight = historicalHeight - retargetInterval
+    const historicalHeader = await headerNode.getHeader(testHeight)
 
-    const historicalHeader = await headerNode.getHeader(historicalHeight - retargetInterval)
-
-    let noHistoricalEntry = false
-    try {
-      const raw = historicalHeader.toRaw()
-      ChainEntry.fromRaw(raw)
-    } catch (e) {
-      assert(
-        e.message.includes('Out of bounds read'),
-        'Error should have come from turning a header into a chain entry resultin in an out of bounds read'
-      )
-      noHistoricalEntry = true
-    }
-
-    assert(noHistoricalEntry, 'Expected historical headers to not be stored as entries')
+    assert(Headers.isHeaders(historicalHeader), `Expected header for height ${testHeight} to be returned as a header`)
+    assert(
+      !ChainEntry.isChainEntry(historicalHeader),
+      `Expected header for height ${testHeight} to not be a valid chain entry`
+    )
 
     let entry = await headerNode.getHeader(lastCheckpoint + count - 1)
-    entry = entry.toRaw()
-    entry = ChainEntry.fromRaw(entry)
-    assert(entry, 'Expected there to be a chain entry for non-historical heights')
+    assert(ChainEntry.isChainEntry(entry), 'Expected there to be a chain entry for non-historical heights')
   })
 
   it('should support custom starting header where startHeight is less than lastCheckpoint and at least 1 retarget', async () => {
@@ -266,7 +256,7 @@ mined on the network', async () => {
 
     fastNode = new HeaderNode(options)
 
-    // startup and sync our fastNode with custom start heiht
+    // startup and sync our fastNode with custom start height
     await fastNode.ensure()
     await fastNode.open()
     await fastNode.connect()
