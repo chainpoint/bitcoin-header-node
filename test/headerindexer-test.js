@@ -101,41 +101,11 @@ describe('HeaderIndexer', () => {
     )
   })
 
-  it('should move a startHeight that is between last retarget and lastCheckpoint to the retarget block', async () => {
-    const checkpoint = await chain.getEntryByHeight(5)
-    const {
-      pow: { retargetInterval }
-    } = indexer.network
-
-    // this is a change that will effect all other tests since they share the same instance bcoin
-    // setting this somewhat arbitrarily since this is just testing the initialization of the chain
-    // would not sync correctly since the block at this height doesn't exist
-    setCustomCheckpoint(indexer, retargetInterval * 2.5, checkpoint.hash)
-
-    const newOptions = { ...options, startHeight: retargetInterval * 2.25, chain }
-    let fastIndexer = new HeaderIndexer(newOptions)
-    const { lastCheckpoint } = fastIndexer.network
-
-    // confirm that our various bootstrapping checkpoints are placed correctly
-    assert(
-      lastCheckpoint - newOptions.startHeight < retargetInterval &&
-        lastCheckpoint - (lastCheckpoint % retargetInterval),
-      'Problem setting up the test. Expected start height to before the last checkpoint but after a retarget'
-    )
-
-    const expectedStart = lastCheckpoint - (lastCheckpoint % retargetInterval)
-    assert.equal(
-      fastIndexer.startHeight,
-      expectedStart,
-      'indexer start height should have been adjusted back to the last retargetInterval'
-    )
-  })
-
   describe('startTip', () => {
-    let startHeight, checkpoint, prevEntry, startEntry
+    let startHeight, prevEntry, startEntry, checkpointHeight
     beforeEach(async () => {
       startHeight = 10
-      checkpoint = startHeight + 10
+      checkpointHeight = indexer.network.pow.retargetInterval * 2.5
       prevEntry = await chain.getEntryByHeight(startHeight - 1)
       startEntry = await chain.getEntryByHeight(startHeight)
     })
@@ -145,11 +115,6 @@ describe('HeaderIndexer', () => {
     })
 
     it('should throw if a startTip is between last retarget height and last checkpoint', async () => {
-      // somewhat arbitrary, just need block data for testing, will be updated
-      // and not valid blocks
-      const checkpoint = await chain.getEntryByHeight(5)
-      const prevEntry = await chain.getEntryByHeight(6)
-
       const {
         pow: { retargetInterval }
       } = indexer.network
@@ -157,31 +122,132 @@ describe('HeaderIndexer', () => {
       // this is a change that will effect all other tests since they share the same instance bcoin
       // setting this somewhat arbitrarily since this is just testing the initialization of the chain
       // would not sync correctly since the block at this height doesn't exist
-      setCustomCheckpoint(indexer, retargetInterval * 2.5, checkpoint.hash)
+      setCustomCheckpoint(indexer, checkpointHeight)
 
-      const { lastCheckpoint } = indexer.network
-      // doesn't matter that this block isn't valid, the only test that should be run on initialization is
+      const maxStart = checkpointHeight - (checkpointHeight % retargetInterval)
+
+      // need to make copies so it doesn't affect rest of tests
+      const prevEntryCopy = ChainEntry.fromJSON(prevEntry.toJSON())
+      const startEntryCopy = ChainEntry.fromJSON(startEntry.toJSON())
+
+      // doesn't matter that these entries aren't valid, the only test that should be run on initialization is
       // the serialization and the height. The height should be after last retarget and before lastCheckpoint
-      const maxStart = lastCheckpoint - (lastCheckpoint % retargetInterval)
-      prevEntry.height = maxStart + 1
-      const secondBlock = ChainEntry.fromRaw(prevEntry.toRaw())
-      secondBlock.height = prevEntry.height + 1
-
-      const newOptions = { ...options, startTip: [prevEntry.toRaw(), secondBlock.toRaw()] }
+      prevEntryCopy.height = maxStart + 1
+      startEntryCopy.height = maxStart + 2
+      const newOptions = { ...options, startTip: [prevEntryCopy.toRaw(), startEntryCopy.toRaw()] }
 
       let failed = false
       let message
       try {
-        new HeaderIndexer(newOptions)
+        let newIndexer = new HeaderIndexer(newOptions)
+        await newIndexer.open()
       } catch (e) {
         failed = true
         message = e.message
       }
 
-      assert(failed, 'Expected HeaderIndexer initialization to fail')
+      assert(failed, 'Expected HeaderIndexer open to fail')
       assert(
         message.includes('retarget') && message.includes(maxStart.toString()),
         `Expected failure message to mention retarget interval and suggest a new height. Instead it was: ${message}`
+      )
+    })
+
+    it('should throw for a startHeight that is between last retarget and lastCheckpoint to the retarget block when opened', async () => {
+      // this is a change that will effect all other tests since they share the same instance bcoin
+      // setting this somewhat arbitrarily since this is just testing the initialization of the chain
+      // would not sync correctly since the block at this height doesn't exist
+      setCustomCheckpoint(indexer, checkpointHeight)
+
+      const {
+        pow: { retargetInterval }
+      } = indexer.network
+
+      const newOptions = { ...options, startHeight: retargetInterval * 2.25, chain }
+      let fastIndexer = new HeaderIndexer(newOptions)
+      const { lastCheckpoint } = fastIndexer.network
+
+      // confirm that our various bootstrapping checkpoints are placed correctly
+      assert(
+        lastCheckpoint - newOptions.startHeight < retargetInterval &&
+          lastCheckpoint - (lastCheckpoint % retargetInterval),
+        'Problem setting up the test. Expected start height to before the last checkpoint but after a retarget'
+      )
+
+      const maxStart = lastCheckpoint - (lastCheckpoint % retargetInterval)
+
+      let failed = false
+      let message
+      try {
+        await fastIndexer.open()
+      } catch (e) {
+        message = e.message
+        failed = true
+      }
+
+      assert(
+        failed,
+        `indexer should have failed to open with a start height ${newOptions.startHeight} that was after ${maxStart}`
+      )
+      assert(
+        message.includes('retarget') && message.includes(maxStart.toString()),
+        `Expected failure message to mention retarget interval and suggest a new height. Instead it was: ${message}`
+      )
+    })
+
+    it('should properly vaidate startHeights', () => {
+      // this is a change that will effect all other tests since they share the same instance bcoin
+      // setting this somewhat arbitrarily since this is just testing the initialization of the chain
+      // would not sync correctly since the block at this height doesn't exist
+      setCustomCheckpoint(indexer, checkpointHeight)
+      const {
+        lastCheckpoint,
+        pow: { retargetInterval }
+      } = indexer.network
+      const maxStart = lastCheckpoint - (lastCheckpoint % retargetInterval)
+      assert.equal(maxStart, indexer.getHistoricalPoint(), `getHistoricalPoint should return max start value`)
+
+      let failed = false
+      let message
+
+      try {
+        indexer.validateStartHeight(new Buffer.from())
+      } catch (e) {
+        failed = true
+      }
+
+      assert(failed, 'Expected validation to fail when not passed a number')
+
+      failed = false
+
+      try {
+        indexer.validateStartHeight(lastCheckpoint + 1)
+      } catch (e) {
+        failed = true
+        message = e.message
+      }
+
+      assert(failed, 'Expected validation to fail when passed a height higher than lastCheckpoint')
+      assert(
+        message.includes(lastCheckpoint.toString()) && message.includes('last checkpoint'),
+        'Should have failed with correct message'
+      )
+
+      failed = false
+
+      try {
+        indexer.validateStartHeight(maxStart + 1)
+      } catch (e) {
+        failed = true
+        message = e.message
+      }
+
+      assert(failed, 'Expected validation to fail when passed a non-historical block')
+      assert(
+        message.includes(lastCheckpoint.toString()) &&
+          message.includes('retarget') &&
+          message.includes(maxStart.toString()),
+        'Should have failed with correct message'
       )
     })
 
@@ -190,9 +256,8 @@ describe('HeaderIndexer', () => {
       // hash (third arg) can be arbitrary for the purposes of this test
       // since a change on one indexer affects all instances that share the same bcoin, module
       // this will serve for creating a new test indexer later in the test
-      setCustomCheckpoint(indexer, checkpoint, startEntry.hash)
-      // also need to change retargetInterval for other startTip sanity checks
-      indexer.network.pow.retargetInterval = 2
+      setCustomCheckpoint(indexer, checkpointHeight, startEntry.hash)
+
       const newOptions = { ...options, startTip: [prevEntry.toRaw(), startEntry.toRaw()], logLevel: 'error' }
       const newIndexer = new HeaderIndexer(newOptions)
       await newIndexer.setStartTip()
