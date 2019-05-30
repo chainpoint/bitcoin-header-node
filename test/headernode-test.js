@@ -1,12 +1,12 @@
 'use strict'
 const assert = require('bsert')
 
-const { Network, ChainEntry } = require('bcoin')
+const { Network, ChainEntry, networks, Headers } = require('bcoin')
 const { NodeClient } = require('bclient')
 
 const HeaderNode = require('../lib/headernode')
-const { rimraf, sleep } = require('./util/common')
-const { revHex } = require('../lib/util')
+const { rimraf, sleep, setCustomCheckpoint } = require('./util/common')
+const { revHex, fromRev } = require('../lib/util')
 const {
   initFullNode,
   initNodeClient,
@@ -37,27 +37,52 @@ const ports = {
 
 describe('HeaderNode', function() {
   this.timeout(30000)
+  let lastCheckpoint,
+    retargetInterval = null
   let node = null
   let headerNode = null
   let fastNode = null
   let wallet = null
   let nclient,
     wclient = null
-  let coinbase,
-    headerNodeOptions,
-    initHeight = null
+  let coinbase, headerNodeOptions
 
   before(async () => {
     await rimraf(testPrefix)
     await rimraf(headerTestPrefix)
 
-    initHeight = 20
-
     node = await initFullNode({
       ports,
       prefix: testPrefix,
-      logLevel: 'none'
+      logLevel: 'error'
     })
+
+    nclient = await initNodeClient({ ports: ports.full })
+    wclient = await initWalletClient({ ports: ports.full })
+    wallet = await initWallet(wclient)
+
+    await wclient.execute('selectwallet', ['test'])
+    coinbase = await wclient.execute('getnewaddress', ['blue'])
+
+    // lastCheckpoint and retargetInterval need to be set smaller for testing the behavior of
+    // of checkpoints and custom startHeights so that the tests don't have to mine an unreasonable
+    // number of blocks to test effectively
+    // NOTE: since the functionality to start at a later height and changing retarget interval involves
+    // mutating the `networks` module's lastCheckpoint this will impact all other nodes involved in tests
+    // since they all share the same bcoin instance
+    retargetInterval = 25
+    lastCheckpoint = Math.floor(retargetInterval * 2.5)
+    node.network.pow.retargetInterval = retargetInterval
+
+    await generateInitialBlocks({
+      nclient,
+      wclient,
+      coinbase,
+      genesisTime
+    })
+
+    const checkpoint = await nclient.execute('getblockbyheight', [lastCheckpoint])
+    setCustomCheckpoint(node, lastCheckpoint, fromRev(checkpoint.hash))
 
     headerNodeOptions = {
       prefix: headerTestPrefix,
@@ -70,30 +95,21 @@ describe('HeaderNode', function() {
       memory: false,
       workers: true
     }
+
     headerNode = new HeaderNode(headerNodeOptions)
 
-    nclient = await initNodeClient({ ports: ports.full })
-    wclient = await initWalletClient({ ports: ports.full })
-    wallet = await initWallet(wclient)
-
-    await wclient.execute('selectwallet', ['test'])
-    coinbase = await wclient.execute('getnewaddress', ['blue'])
-
-    await generateInitialBlocks({
-      nclient,
-      wclient,
-      coinbase,
-      genesisTime,
-      blocks: initHeight
-    })
     await headerNode.ensure()
     await headerNode.open()
     await headerNode.connect()
     await headerNode.startSync()
+
     await sleep(1000)
   })
 
   after(async () => {
+    // reset the retargetInterval
+    networks.regtest.pow.retargetInterval = 2016
+
     await wallet.close()
     await wclient.close()
     await nclient.close()
@@ -103,7 +119,7 @@ describe('HeaderNode', function() {
     await rimraf(headerTestPrefix)
 
     // clear checkpoint information on bcoin module
-    if (node.network.lastCheckpoint) headerNode.setCustomCheckpoint()
+    if (node.network.lastCheckpoint) setCustomCheckpoint(node)
 
     if (fastNode && fastNode.opened) await fastNode.close()
   })
@@ -113,7 +129,7 @@ describe('HeaderNode', function() {
   })
 
   it('should sync a chain of block headers from peers', async () => {
-    for (let i = 0; i < initHeight; i++) {
+    for (let i = 0; i < 10; i++) {
       // first block doesn't have valid headers
       if (i === 0) continue
 
@@ -122,7 +138,7 @@ describe('HeaderNode', function() {
 
       if (!header) throw new Error(`No header in the index for block ${i}`)
 
-      assert.equal(entry.hash.toString('hex'), header.hash.toString('hex'))
+      assert.equal(header.rhash(), entry.rhash())
     }
   })
 
@@ -139,7 +155,7 @@ mined on the network', async () => {
     const headerTip = await headerNode.getTip()
     const header = await headerNode.getHeader(headerTip.height)
 
-    assert.equal(tip, headerTip.height, 'Expected chain tip and header tip to be the same')
+    assert.equal(headerTip.height, tip, 'Expected chain tip and header tip to be the same')
     assert(header, 'Expected to get a header for the latest tip')
   })
 
@@ -155,7 +171,7 @@ mined on the network', async () => {
     let tip = await nclient.execute('getblockcount')
     headerTip = await headerNode.getTip()
 
-    assert.equal(tip - count, headerTip.height, 'Headers tip before sync should same as before blocks were mined')
+    assert.equal(headerTip.height, tip - count, 'Headers tip before sync should be same as before blocks were mined')
 
     // reset the chain in case in-memory chain not picked up by GC
     await resetChain(headerNode)
@@ -172,53 +188,58 @@ mined on the network', async () => {
     tip = await nclient.execute('getblockcount')
 
     headerTip = await headerNode.getTip()
-
-    assert.equal(tip, headerTip.height, 'Expected chain tip and header tip to be the same after new blocks mined')
+    assert.equal(headerTip.height, tip, 'Expected chain tip and header tip to be the same after new blocks mined')
 
     assert(header, 'Expected to get a header for the latest tip after blocks mined')
   })
 
   it('should support checkpoints', async () => {
-    // header index needs to maintain chain from the last checkpoint
-    // this test will set a checkpoint for our regtest network
-    // reset the headernode chain similar to the previous test
-    // and then confirm that only the non-historical blocks were
+    // header index needs to maintain chain entries for all non-historical blocks
+    // this test will confirm that only the non-historical blocks were
     // restored on the chain, i.e. blocks newer than lastCheckpoint
-
-    const checkpoint = await headerNode.getTip()
+    // in addition to a set of historical block entries between the last retarget height
+    // and the lastCheckpoint
     const count = 10
-
-    // mine a block on top of the checkpoint
-    await generateBlocks(1, nclient, coinbase)
-    await sleep(500)
-
+    const historicalHeight = lastCheckpoint - (lastCheckpoint % retargetInterval)
     await headerNode.disconnect()
 
     // mine some blocks while header node is offline
     await generateBlocks(count, nclient, coinbase)
     await sleep(500)
 
-    // set checkpoint
-    headerNode.setCustomCheckpoint(checkpoint.height, checkpoint.hash)
-
     // resetting chain db to clear from memory
-    await resetChain(headerNode, checkpoint.height - count)
+    await resetChain(headerNode, lastCheckpoint + 1)
+    const testHeight = historicalHeight - retargetInterval
+    const historicalHeader = await headerNode.getHeader(testHeight)
 
-    const historicalEntry = await headerNode.chain.getEntryByHeight(checkpoint.height - 2)
+    assert(Headers.isHeaders(historicalHeader), `Expected header for height ${testHeight} to be returned as a header`)
+    assert(
+      !ChainEntry.isChainEntry(historicalHeader),
+      `Expected header for height ${testHeight} to not be a valid chain entry`
+    )
 
-    const checkpointEntry = await headerNode.chain.getEntryByHeight(checkpoint.height + count - 1)
-
-    assert(!historicalEntry, 'Expected there to be no entry for height earlier than checkpoint')
-    assert(checkpointEntry, 'Expected there to be an entry for height after checkpoint')
+    let entry = await headerNode.getHeader(lastCheckpoint + count - 1)
+    assert(ChainEntry.isChainEntry(entry), 'Expected there to be a chain entry for non-historical heights')
   })
 
-  it('should support fast sync with custom starting header', async () => {
-    // need to reset checkpoints otherwise causes issues for creating a new node
-    if (node.network.lastCheckpoint) headerNode.setCustomCheckpoint()
+  it('should support custom starting header where startHeight is less than lastCheckpoint and at least 1 retarget', async () => {
+    // in order to test that pow checks will work, we need to mine past a retarget interval
+    // to test that the start point is adjusted accordingly. If we don't have at least one retarget
+    // block then it will adjust back to genesis
+    // await generateBlocks(retargetInterval, nclient, coinbase)
+    const chainHeight = await nclient.execute('getblockcount')
 
-    // arbitrary block to start our new node's chain from
-    // creating a tip with two blocks (prev and tip)
-    const startHeight = 50
+    // set a custom lastCheckpoint for testing since regtest has none
+    let checkpointEntry = await node.chain.getEntryByHeight(lastCheckpoint)
+    assert(checkpointEntry, 'Problem finding checkpoint block')
+    assert(
+      checkpointEntry.height < chainHeight && checkpointEntry.height - retargetInterval > 0,
+      'Problem setting up the test. Checkpoint height should be less than the chain tip and after at least 1 retarget'
+    )
+
+    // starting block must less than lastCheckpoint and less than or equal to a retargeting interval
+    // this sets the starting height to the last retargeting interval before the lastCheckpoint
+    const startHeight = checkpointEntry.height - (checkpointEntry.height % retargetInterval) - 1
     const startTip = []
     let entry = await node.chain.getEntryByHeight(startHeight)
     startTip.push(entry.toRaw('hex'))
@@ -233,40 +254,31 @@ mined on the network', async () => {
       memory: true
     }
 
-    // set a custom lastCheckpoint to confirm it can sync past it
-    let checkpointEntry = await node.chain.getEntryByHeight(startHeight + 10)
-    assert(checkpointEntry, 'Problem finding checkpoint block')
-
-    // NOTE: since the functionality to start at a later height
-    // involves mutating the networks module's lastCheckpoint
-    // this will impact all other nodes involved in tests since
-    // they all share the same bcoin instance
-    // This only happens on `open` for a start point that
-    // is after the network's lastCheckpoint (which is zero for regtest)
     fastNode = new HeaderNode(options)
 
-    fastNode.setCustomCheckpoint(checkpointEntry.height, checkpointEntry.hash)
+    // startup and sync our fastNode with custom start height
     await fastNode.ensure()
     await fastNode.open()
     await fastNode.connect()
     await fastNode.startSync()
     await sleep(500)
 
-    const oldHeader = await fastNode.getHeader(startHeight - 1)
-    const newHeader = await fastNode.getHeader(startHeight + 5)
+    const beforeStartHeight = await fastNode.getHeader(startHeight - 1)
+    const afterStartHeight = await fastNode.getHeader(startHeight + 5)
 
-    assert(!oldHeader, 'Did not expect to see an earlier block than the start height')
-    assert(newHeader, 'Expected to be able to retrieve a header later than start point')
+    assert(!beforeStartHeight, 'Did not expect to see an earlier block than the start height')
+    assert(afterStartHeight, 'Expected to be able to retrieve a header later than start point')
 
     // let's just test that it can reconnect
     // after losing its in-memory chain
     await fastNode.disconnect()
     await resetChain(fastNode, startHeight + 1)
+
     const tip = await nclient.execute('getblockcount')
     const fastTip = await fastNode.getTip()
 
-    assert.equal(tip, fastTip.height, 'expected tips to be in sync after "restart"')
-    fastNode.setCustomCheckpoint()
+    assert.equal(fastTip.height, tip, 'expected tips to be in sync after "restart"')
+    setCustomCheckpoint(fastNode)
   })
 
   xit('should handle a reorg', () => {})
@@ -350,6 +362,7 @@ async function resetChain(node, start = 0) {
   // can't always reset to 0 because `chaindb.reset`
   // won't work when there is a custom start point
   // because chain "rewind" won't work
+
   await node.chain.db.reset(start)
   await node.close()
   await node.open()
@@ -357,5 +370,5 @@ async function resetChain(node, start = 0) {
   await node.startSync()
 
   // let indexer catch up
-  await sleep(500)
+  await sleep(1000)
 }

@@ -33,7 +33,7 @@ process.on('unhandledRejection', (err, promise) => {
 });
 
 process.on('SIGINT', async () => {
-  await node.close();
+  if (node.opened) await node.close();
 });
 
 (async () => {

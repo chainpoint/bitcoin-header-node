@@ -23,7 +23,7 @@ async function initFullNode(options) {
     bip37: true,
     port: options.ports.full.p2p,
     httpPort: options.ports.full.node,
-    maxOutbound: 1,
+    maxOutbound: 2,
     seeds: [],
     memory: false,
     plugins: [require('bcoin/lib/wallet/plugin')],
@@ -35,6 +35,7 @@ async function initFullNode(options) {
   await node.ensure()
   await node.open()
   await node.connect()
+  await node.startSync()
   return node
 }
 
@@ -52,7 +53,7 @@ async function initSPVNode(options) {
     seeds: [],
     nodes: [`127.0.0.1:${options.ports.full.p2p}`],
     memory: false,
-    plugins: [require('../../lib/wallet/plugin')],
+    plugins: [require('bcoin/lib/wallet/plugin')],
     env: {
       BCOIN_WALLET_HTTP_PORT: options.ports.spv.wallet.toString()
     },

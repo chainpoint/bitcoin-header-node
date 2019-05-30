@@ -154,19 +154,28 @@ $ yarn test
 
 ## Notes
 
-If the initial sync is interrupted and restarted, you may notice your logs (if they are on)
-spitting out a bunch of messages about blocks being re-added to the chain.
-This is the in-memory chain getting re-initialized from the headersindex. This is necessary
-for blocks after the network's lastCheckpoint since the chain db is used for certain contextual checks
-when syncing a node, for example handling re-orgs and orphan blocks. We take the header index data that is persisted
-and add these to the chain db so that they are available for these operations.
+- If the initial sync is interrupted and restarted, you may notice your logs (if they are on and set to level "spam")
+  spitting out a bunch of messages about blocks being re-added to the chain.
+  This is the in-memory chain getting re-initialized from the headersindex. This is necessary
+  for blocks after the network's lastCheckpoint since the chain db is used for certain contextual checks
+  when syncing a node, for example handling re-orgs and orphan blocks. We take the header index data that is persisted
+  and add these to the chain db so that they are available for these operations.
 
-The HeaderIndexer takes the place of the chain in several places for the Header Node to avoid some of this
-reliance on the chain which we are not persisting. The custom `HeaderPool` is extended from bcoin's default `Pool` object
-to replace calls to methods normally done by the chain that won't work given that there is no chain (or in the case
-of a custom start point, not even a proper genesis block). The best example is `getLocator` which normally gets block hashes
-all the way back to genesis on the chain, but in our case will run the checks on the header index, and stop early if using
-a custom start point.
+- The HeaderIndexer takes the place of the chain in several places for the Header Node to avoid some of this
+  reliance on the chain which we are not persisting. The custom `HeaderPool` is extended from bcoin's default `Pool` object
+  to replace calls to methods normally done by the chain that won't work given that there is no chain (or in the case
+  of a custom start point, not even a proper genesis block). The best example is `getLocator` which normally gets block hashes
+  all the way back to genesis on the chain, but in our case will run the checks on the header index, and stop early if using
+  a custom start point.
+
+- In the unlikely case that you are using a header node on regtest or simnet (such as in the unit tests),
+  it is not recommended to use a custom start height. The reason is that there are some different PoW checks that are done
+  for testing networks to account for variance in mining hash power. So in a situation where there are no checkpoints or you're
+  starting your node _after_ the lastCheckpoint (which is zero for regtest/simnet), the chain will search backwards for old blocks
+  to confirm proof of work even if not in a new retargeting interval. Start height initialization will typically account for this
+  on testnet and mainnet for example, but since regtest does not have a lastCheckpoint, this can make behavior a little weird.
+  For the tests, to confirm that the start height functionality works with checkpoints, we adjust the retarget interval down and
+  set a custom lastCheckpoint rather than having to mine over 2k blocks which would slow the tests down.
 
 ## TODO:
 
@@ -175,13 +184,13 @@ a custom start point.
       initial sync and reduce db size further)
 - [x] Try and get rid of the locator error in `net` (can be fixed if `getLocator` returns array of just start hash)
 - [ ] Investigate other performance improvements such as [compressed headers](https://github.com/RCasatta/compressedheaders)
-- [ ] A header chain with custom start point currently can't handle a chain db reset.
+- [x] A header chain with custom start point currently can't handle a chain db reset.
       This should be made more robust, even if just throwing an error.
       This weakness can be demonstrated in the fast sync test for headernode,
       where the chain is reset. Reset chain db to 0 and the method will throw
       because it can't rewind the chain properly.
 - [ ] Fix or avoid tedious process of re-initializing chain from headers index when past lastCheckpoint
-- [ ] Non-deterministic problem where the node gets caught in an infinite loop resolving orphans
+- [x] Non-deterministic problem where the node gets caught in an infinite loop resolving orphans
       after having synced to tip and the node restarts.
 
 ## License
