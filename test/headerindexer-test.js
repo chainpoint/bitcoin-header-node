@@ -131,51 +131,95 @@ describe('HeaderIndexer', () => {
     )
   })
 
-  it('should throw if a startTip is between last retarget height and last checkpoint', async () => {
-    // somewhat arbitrary, just need block data for testing, will be updated
-    // and not valid blocks
-    const checkpoint = await chain.getEntryByHeight(5)
-    const startEntry = await chain.getEntryByHeight(6)
+  describe('startTip', () => {
+    let startHeight, checkpoint, prevEntry, startEntry
+    beforeEach(async () => {
+      startHeight = 10
+      checkpoint = startHeight + 10
+      prevEntry = await chain.getEntryByHeight(startHeight - 1)
+      startEntry = await chain.getEntryByHeight(startHeight)
+    })
+    afterEach(() => {
+      indexer.network.pow.retargetInterval = 2016
+      setCustomCheckpoint(indexer)
+    })
 
-    const {
-      pow: { retargetInterval }
-    } = indexer.network
+    it('should throw if a startTip is between last retarget height and last checkpoint', async () => {
+      // somewhat arbitrary, just need block data for testing, will be updated
+      // and not valid blocks
+      const checkpoint = await chain.getEntryByHeight(5)
+      const prevEntry = await chain.getEntryByHeight(6)
 
-    // this is a change that will effect all other tests since they share the same instance bcoin
-    // setting this somewhat arbitrarily since this is just testing the initialization of the chain
-    // would not sync correctly since the block at this height doesn't exist
-    setCustomCheckpoint(indexer, retargetInterval * 2.5, checkpoint.hash)
+      const {
+        pow: { retargetInterval }
+      } = indexer.network
 
-    const { lastCheckpoint } = indexer.network
-    // doesn't matter that this block isn't valid, the only test that should be run on initialization is
-    // the serialization and the height. The height should be after last retarget and before lastCheckpoint
-    const maxStart = lastCheckpoint - (lastCheckpoint % retargetInterval)
-    startEntry.height = maxStart + 1
-    const secondBlock = ChainEntry.fromRaw(startEntry.toRaw())
-    secondBlock.height = startEntry.height + 1
+      // this is a change that will effect all other tests since they share the same instance bcoin
+      // setting this somewhat arbitrarily since this is just testing the initialization of the chain
+      // would not sync correctly since the block at this height doesn't exist
+      setCustomCheckpoint(indexer, retargetInterval * 2.5, checkpoint.hash)
 
-    const newOptions = { ...options, startTip: [startEntry.toRaw(), secondBlock.toRaw()] }
+      const { lastCheckpoint } = indexer.network
+      // doesn't matter that this block isn't valid, the only test that should be run on initialization is
+      // the serialization and the height. The height should be after last retarget and before lastCheckpoint
+      const maxStart = lastCheckpoint - (lastCheckpoint % retargetInterval)
+      prevEntry.height = maxStart + 1
+      const secondBlock = ChainEntry.fromRaw(prevEntry.toRaw())
+      secondBlock.height = prevEntry.height + 1
 
-    let failed = false
-    let message
-    try {
-      new HeaderIndexer(newOptions)
-    } catch (e) {
-      failed = true
-      message = e.message
-    }
+      const newOptions = { ...options, startTip: [prevEntry.toRaw(), secondBlock.toRaw()] }
 
-    assert(failed, 'Expected HeaderIndexer initialization to fail')
-    assert(
-      message.includes('retarget') && message.includes(maxStart.toString()),
-      'Expected failure message to mention retarget interval and suggest a new height.'
-    )
+      let failed = false
+      let message
+      try {
+        new HeaderIndexer(newOptions)
+      } catch (e) {
+        failed = true
+        message = e.message
+      }
+
+      assert(failed, 'Expected HeaderIndexer initialization to fail')
+      assert(
+        message.includes('retarget') && message.includes(maxStart.toString()),
+        `Expected failure message to mention retarget interval and suggest a new height. Instead it was: ${message}`
+      )
+    })
+
+    it('should be able to set and get a startTip', async () => {
+      // setting a custom checkpoint so we can set the startTip without throwing an error
+      // hash (third arg) can be arbitrary for the purposes of this test
+      // since a change on one indexer affects all instances that share the same bcoin, module
+      // this will serve for creating a new test indexer later in the test
+      setCustomCheckpoint(indexer, checkpoint, startEntry.hash)
+      // also need to change retargetInterval for other startTip sanity checks
+      indexer.network.pow.retargetInterval = 2
+      const newOptions = { ...options, startTip: [prevEntry.toRaw(), startEntry.toRaw()], logLevel: 'error' }
+      const newIndexer = new HeaderIndexer(newOptions)
+      await newIndexer.setStartTip()
+      const [actualPrev, actualStart] = newIndexer.startTip
+
+      assert.equal(ChainEntry.fromRaw(actualPrev).rhash(), prevEntry.rhash(), "prevEntries for tip didn't match")
+      assert.equal(ChainEntry.fromRaw(actualStart).rhash(), startEntry.rhash(), "startEntries for tip didn't match")
+
+      const [dbPrev, dbStart] = await newIndexer.getStartTip()
+      assert.equal(ChainEntry.fromRaw(dbPrev).rhash(), prevEntry.rhash(), "prevEntries for tip from db didn't match")
+      assert.equal(ChainEntry.fromRaw(dbStart).rhash(), startEntry.rhash(), "startEntries for tip from db didn't match")
+    })
+
+    it('should return null for getStartTip when none is set', async () => {
+      const newIndexer = new HeaderIndexer(options)
+      await newIndexer.setStartTip()
+
+      const startTip = await newIndexer.getStartTip()
+
+      assert.equal(startTip, null, 'Expected startTip to be null when none was passed')
+    })
   })
 
   describe('getLocator', () => {
     it('should get an array of hashes from header chain tip back to genesis', async () => {
       const locator = await indexer.getLocator()
-      const genesis = await chain.getEntryByHeight(0)
+      const genesis = await chain.network.genesis
       const tip = chain.tip
 
       assert.equal(

@@ -35,7 +35,7 @@ const ports = {
   }
 }
 
-describe.only('HeaderNode', function() {
+describe('HeaderNode', function() {
   this.timeout(30000)
   let lastCheckpoint,
     retargetInterval = null
@@ -232,7 +232,7 @@ mined on the network', async () => {
     assert(entry, 'Expected there to be a chain entry for non-historical heights')
   })
 
-  it('should support custom starting header where startHeight is less than lastCheckpoint and greater than at least 1 retarget', async () => {
+  it('should support custom starting header where startHeight is less than lastCheckpoint and at least 1 retarget', async () => {
     // in order to test that pow checks will work, we need to mine past a retarget interval
     // to test that the start point is adjusted accordingly. If we don't have at least one retarget
     // block then it will adjust back to genesis
@@ -249,7 +249,7 @@ mined on the network', async () => {
 
     // starting block must less than lastCheckpoint and less than or equal to a retargeting interval
     // this sets the starting height to the last retargeting interval before the lastCheckpoint
-    const startHeight = checkpointEntry.height - (checkpointEntry.height % retargetInterval)
+    const startHeight = checkpointEntry.height - (checkpointEntry.height % retargetInterval) - 1
     const startTip = []
     let entry = await node.chain.getEntryByHeight(startHeight)
     startTip.push(entry.toRaw('hex'))
