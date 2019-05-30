@@ -54,7 +54,7 @@ describe('HeaderIndexer', () => {
   })
 
   after(async () => {
-    await indexer.close()
+    if (indexer.opened) await indexer.close()
     await chain.close()
     await miner.close()
   })
@@ -101,17 +101,65 @@ describe('HeaderIndexer', () => {
     )
   })
 
+  describe('getHeader and getEnry', () => {
+    let lastCheckpoint, historicalPoint, nonHistoricalPoint
+    beforeEach(async () => {
+      lastCheckpoint = 5
+      indexer.network.pow.retargetInterval = Math.floor(lastCheckpoint / 2)
+      setCustomCheckpoint(indexer, lastCheckpoint)
+      historicalPoint = await indexer.getHistoricalPoint()
+      nonHistoricalPoint = historicalPoint + 1
+    })
+
+    afterEach(async () => {
+      indexer.network.pow.retargetInterval = 2016
+    })
+
+    it('getHeader should return a header for historical entries', async () => {
+      let header = await indexer.getHeader(historicalPoint)
+      assert(Headers.isHeaders(header), 'Expected to get a header for a historical entry')
+    })
+
+    it('getHeader should return entries for non-historical entries', async () => {
+      let entry = await indexer.getHeader(nonHistoricalPoint)
+      assert(ChainEntry.isChainEntry(entry), `Expected to get a chain entry for height ${nonHistoricalPoint}`)
+    })
+
+    it('getEntry should return the same as getHeader for non-historical entries', async () => {
+      let header = await indexer.getHeader(nonHistoricalPoint)
+      let entry = await indexer.getEntry(nonHistoricalPoint)
+      assert.equal(
+        entry.rhash(),
+        header.rhash(),
+        `getEntry to return same entry for non-historical height ${nonHistoricalPoint}`
+      )
+    })
+
+    it('getEntry should always return a ChainEntry object', async () => {
+      let entry = await indexer.getEntry(nonHistoricalPoint)
+      let historicalEntry = await indexer.getEntry(historicalPoint - 1)
+      assert(ChainEntry.isChainEntry(entry), `Expected to get a chain entry for height ${nonHistoricalPoint}`)
+      assert(
+        ChainEntry.isChainEntry(historicalEntry),
+        `Expected to get a chain entry for height ${historicalPoint - 1}`
+      )
+    })
+  })
+
   describe('startTip', () => {
-    let startHeight, prevEntry, startEntry, checkpointHeight
+    let startHeight, prevEntry, startEntry, checkpointHeight, newIndexer
     beforeEach(async () => {
       startHeight = 10
       checkpointHeight = indexer.network.pow.retargetInterval * 2.5
       prevEntry = await chain.getEntryByHeight(startHeight - 1)
       startEntry = await chain.getEntryByHeight(startHeight)
     })
-    afterEach(() => {
-      indexer.network.pow.retargetInterval = 2016
+    afterEach(async () => {
       setCustomCheckpoint(indexer)
+      if (newIndexer && newIndexer.db.loaded) {
+        await newIndexer.db.close()
+        newIndexer = null
+      }
     })
 
     it('should throw if a startTip is between last retarget height and last checkpoint', async () => {
@@ -265,18 +313,16 @@ describe('HeaderIndexer', () => {
 
       assert.equal(ChainEntry.fromRaw(actualPrev).rhash(), prevEntry.rhash(), "prevEntries for tip didn't match")
       assert.equal(ChainEntry.fromRaw(actualStart).rhash(), startEntry.rhash(), "startEntries for tip didn't match")
-
+      await newIndexer.open()
       const [dbPrev, dbStart] = await newIndexer.getStartTip()
       assert.equal(ChainEntry.fromRaw(dbPrev).rhash(), prevEntry.rhash(), "prevEntries for tip from db didn't match")
       assert.equal(ChainEntry.fromRaw(dbStart).rhash(), startEntry.rhash(), "startEntries for tip from db didn't match")
     })
 
     it('should return null for getStartTip when none is set', async () => {
-      const newIndexer = new HeaderIndexer(options)
-      await newIndexer.setStartTip()
-
+      newIndexer = new HeaderIndexer(options)
+      await newIndexer.db.open()
       const startTip = await newIndexer.getStartTip()
-
       assert.equal(startTip, null, 'Expected startTip to be null when none was passed')
     })
   })
