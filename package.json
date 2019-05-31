@@ -1,7 +1,7 @@
 {
-  "name": "headernode",
+  "name": "bhn",
   "version": "0.0.1",
-  "description": "A lightweight node for syncing only bitcoin block headers from a specific height",
+  "description": "Bitcoin Header Node- A lightweight node for syncing only bitcoin block headers from a specific height",
   "main": "lib/index.js",
   "repository": "git://github.com/chainpoint/headernode.git",
   "scripts": {
@@ -14,14 +14,13 @@
   "author": "bucko",
   "license": "MIT",
   "bin": {
-    "headernode": "./bin/headernode"
+    "bhn": "./bin/bhn"
   },
   "dependencies": {
     "bcoin": "bucko13/bcoin#expose-filter",
     "bcurl": "^0.1.6",
     "bdb": "^1.1.5",
     "bfile": "^0.2.0",
-    "bmutex": "^0.1.5",
     "bsert": "^0.0.9",
     "bufio": "^1.0.5",
     "bweb": "^0.1.8"

@@ -294,15 +294,23 @@ mined on the network', async () => {
     })
 
     afterEach(async () => {
+      headerNode.headerindex.startHeight = 0
       await client.close()
     })
 
     it('should be able to return info about the node', async () => {
+      // just want to set it to confirm that it is returned in info
+      headerNode.headerindex.startHeight = 10
       const info = await client.getInfo()
       const rpcInfo = await client.execute('getinfo')
       const chain = headerNode.chain
       assert.equal(info.chain.height, chain.height, 'Expected to get back chain height from info endpoint')
       assert(rpcInfo)
+      assert.equal(
+        rpcInfo.startheight,
+        headerNode.headerindex.startHeight,
+        'Expected to get back start height from rpc info endpoint'
+      )
     })
 
     it('should support getting block headers with rpc and http endpoints', async () => {
@@ -325,10 +333,17 @@ mined on the network', async () => {
       )
 
       // rpc
-      const rpcHeader = await client.execute('getblockheader', [height])
-      assert(rpcHeader, 'Could not get block by height with rpc')
+      const rpcHeader = await client.execute('getblockheader', [header.rhash()])
+      const rpcHeaderByHeight = await client.execute('getheaderbyheight', [height])
+
       assert.equal(
         rpcHeader.merkleroot,
+        revHex(header.merkleRoot),
+        'Expected merkle root returned by server to match with one from header node'
+      )
+      assert(rpcHeaderByHeight, 'Could not get block by height with rpc')
+      assert.equal(
+        rpcHeaderByHeight.merkleroot,
         revHex(header.merkleRoot),
         'Expected merkle root returned by server to match with one from header node'
       )
