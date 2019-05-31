@@ -35,7 +35,7 @@ Using from GitHub
 $ git clone https://github.com/chainpoint/headernode
 $ cd headernode
 $ yarn install
-$ ./bin/headernode
+$ ./bin/bhn
 ```
 
 Mainnet should take between 1-2 hours for initial sync.
@@ -58,7 +58,7 @@ the sync will just fail.
 You need to tell your node you want to start with a custom start point. There are two ways to do this on mainnet: with
 the start height or with the raw header data for the start block and _its previous block_ (this is needed for contextual checks).
 For other networks, including testnet or regtest, only the raw data will work since the height functionality works by querying
-the [btc.com](https://btc.com) API for the target blocks (you can see how this works in the headernode tests for startTip).
+the [btc.com](https://btc.com) API for the target blocks (you can see how this works in the bhn tests for startTip).
 
 Both options, `start-tip` or `start-height`, can be passed as with any
 [bcoin Configuration](https://github.com/bcoin-org/bcoin/blob/master/docs/configuration.md).
@@ -66,7 +66,7 @@ Both options, `start-tip` or `start-height`, can be passed as with any
 For example, to start from block 337022, you can pass in the following at runtime:
 
 ```bash
-$ ./bin/headernode --start-height=337022
+$ ./bin/bhn --start-height=337022
 ```
 
 Alternatively, adding it to a bcoin.conf configuration file in your node's prefix directory or as an environment variable `BCOIN_START_HEIGHT`
@@ -113,14 +113,14 @@ an API key if this is enabled.
 }
 ```
 
-#### `getblockheader`
+#### `getheaderbyheight`
 
 The RPC interface is also available
 
 ```js
 ;(async () => {
   const height = 450000
-  await client.execute('getblockheader', [height])
+  await client.execute('getheaderbyheight', [height])
 })()
 ```
 
@@ -143,6 +143,12 @@ The RPC interface is also available
   "nextblockhash": null
 }
 ```
+
+#### `getblockheader`
+
+NOTE: The api is the same as for normal bcoin/bitcoin nodes. However, when using against a header node,
+this will only work on recent blocks. Since the bhn indexer only indexes by height and all other chain
+data is saved in memory, older blocks will not be found. Use `getheaderbyheight` method above instead when possible
 
 ## Testing
 
