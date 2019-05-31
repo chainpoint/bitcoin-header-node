@@ -448,13 +448,6 @@ blst@~0.1.4:
   dependencies:
     bsert "~0.0.8"
 
-bmutex@^0.1.5:
-  version "0.1.6"
-  resolved "https://registry.yarnpkg.com/bmutex/-/bmutex-0.1.6.tgz#28d721316c95c9deda77b3e50b71ee356215b415"
-  integrity sha512-nXWOXtQHbfPaMl6jyEF/rmRMrcemj2qn+OCAI/uZYurjfx7Dg3baoXdPzHOL0U8Cfvn8CWxKcnM/rgxL7DR4zw==
-  dependencies:
-    bsert "~0.0.10"
-
 bmutex@~0.1.5:
   version "0.1.5"
   resolved "https://registry.yarnpkg.com/bmutex/-/bmutex-0.1.5.tgz#0b96908c28aa12821f7494eef468d235566d19e5"

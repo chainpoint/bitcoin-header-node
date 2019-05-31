@@ -2,7 +2,7 @@
 
 'use strict';
 
-process.title = 'bcoin';
+process.title = 'bhn';
 
 const HeaderNode = require('../lib/headernode');
 
