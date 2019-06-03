@@ -35,7 +35,7 @@ const ports = {
   }
 }
 
-describe('HeaderNode', function() {
+describe.only('HeaderNode', function() {
   this.timeout(30000)
   let lastCheckpoint,
     retargetInterval = null
