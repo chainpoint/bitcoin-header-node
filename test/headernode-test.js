@@ -35,8 +35,8 @@ const ports = {
   }
 }
 
-describe.only('HeaderNode', function() {
-  this.timeout(30000)
+describe('HeaderNode', function() {
+  this.timeout(300000)
   let lastCheckpoint,
     retargetInterval = null
   let node = null
@@ -103,12 +103,14 @@ describe.only('HeaderNode', function() {
     await headerNode.connect()
     await headerNode.startSync()
 
-    await sleep(1000)
+    await sleep(3000)
   })
 
   after(async () => {
     // reset the retargetInterval
     networks.regtest.pow.retargetInterval = 2016
+    // clear checkpoint information on bcoin module
+    if (node.network.lastCheckpoint) setCustomCheckpoint(node)
 
     await wallet.close()
     await wclient.close()
@@ -117,9 +119,6 @@ describe.only('HeaderNode', function() {
     await headerNode.close()
     await rimraf(testPrefix)
     await rimraf(headerTestPrefix)
-
-    // clear checkpoint information on bcoin module
-    if (node.network.lastCheckpoint) setCustomCheckpoint(node)
 
     if (fastNode && fastNode.opened) await fastNode.close()
   })
@@ -149,6 +148,7 @@ mined on the network', async () => {
     // mine some blocks while header node is offline
     await generateBlocks(count, nclient, coinbase)
     await sleep(500)
+    // await sleep(1000)
 
     const tip = await nclient.execute('getblockcount')
 
@@ -174,7 +174,7 @@ mined on the network', async () => {
     assert.equal(headerTip.height, tip - count, 'Headers tip before sync should be same as before blocks were mined')
 
     // reset the chain in case in-memory chain not picked up by GC
-    await resetChain(headerNode)
+    await resetChain(headerNode, 0, false)
 
     headerTip = await headerNode.getTip()
     const header = await headerNode.getHeader(headerTip.height)
@@ -208,7 +208,7 @@ mined on the network', async () => {
     await sleep(500)
 
     // resetting chain db to clear from memory
-    await resetChain(headerNode, lastCheckpoint + 1)
+    await resetChain(headerNode, historicalHeight)
     const testHeight = historicalHeight - retargetInterval
     const historicalHeader = await headerNode.getHeader(testHeight)
 
@@ -271,8 +271,9 @@ mined on the network', async () => {
 
     // let's just test that it can reconnect
     // after losing its in-memory chain
+    const startTipHeight = ChainEntry.fromRaw(startTip[1]).height
     await fastNode.disconnect()
-    await resetChain(fastNode, startHeight + 1)
+    await resetChain(fastNode, startTipHeight + 1)
 
     const tip = await nclient.execute('getblockcount')
     const fastTip = await fastNode.getTip()
@@ -372,18 +373,17 @@ mined on the network', async () => {
  * Helpers
  */
 
-async function resetChain(node, start = 0) {
+async function resetChain(node, start = 0, replay = true) {
   // reset chain to custom start
   // can't always reset to 0 because `chaindb.reset`
   // won't work when there is a custom start point
   // because chain "rewind" won't work
-
-  await node.chain.db.reset(start)
+  if (replay) await node.chain.replay(start)
   await node.close()
   await node.open()
   await node.connect()
   await node.startSync()
 
   // let indexer catch up
-  await sleep(1000)
+  await sleep(500)
 }

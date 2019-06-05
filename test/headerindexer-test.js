@@ -58,7 +58,6 @@ describe('HeaderIndexer', () => {
 
     // mine some blocks
     await mineBlocks(count)
-    console.log('should it?')
   })
 
   after(async () => {
