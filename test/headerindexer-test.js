@@ -2,7 +2,7 @@
 
 const assert = require('bsert')
 const { Chain, protocol, Miner, Headers, ChainEntry, blockstore } = require('bcoin')
-// const BlockStore = require('../lib/blockstore/level');
+
 const { sleep, setCustomCheckpoint } = require('./util/common')
 const HeaderIndexer = require('../lib/headerindexer')
 

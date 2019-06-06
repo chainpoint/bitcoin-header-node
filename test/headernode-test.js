@@ -36,7 +36,7 @@ const ports = {
 }
 
 describe('HeaderNode', function() {
-  this.timeout(300000)
+  this.timeout(30000)
   let lastCheckpoint,
     retargetInterval = null
   let node = null
@@ -166,7 +166,7 @@ mined on the network', async () => {
 
     // mine some blocks while header node is offline
     await generateBlocks(count, nclient, coinbase)
-    await sleep(250)
+    await sleep(500)
 
     let tip = await nclient.execute('getblockcount')
     headerTip = await headerNode.getTip()
