@@ -142,13 +142,12 @@ describe('HeaderNode', function() {
     }
   })
 
-  it('should index new block headers when new blocks are \
-mined on the network', async () => {
+  it('should index new block headers when new blocks are mined on the network', async () => {
     const count = 10
 
     // mine some blocks while header node is offline
     await generateBlocks(count, nclient, coinbase)
-    await sleep(500)
+    await sleep(250)
 
     const tip = await nclient.execute('getblockcount')
 
@@ -166,7 +165,7 @@ mined on the network', async () => {
 
     // mine some blocks while header node is offline
     await generateBlocks(count, nclient, coinbase)
-    await sleep(500)
+    await sleep(250)
 
     let tip = await nclient.execute('getblockcount')
     headerTip = await headerNode.getTip()
@@ -385,5 +384,5 @@ async function resetChain(node, start = 0, replay = true) {
   await node.startSync()
 
   // let indexer catch up
-  await sleep(750)
+  await sleep(500)
 }
