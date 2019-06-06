@@ -93,7 +93,8 @@ describe('HeaderNode', function() {
       logLevel: 'error',
       nodes: [`127.0.0.1:${ports.full.p2p}`],
       memory: false,
-      workers: true
+      workers: true,
+      listen: true
     }
 
     headerNode = new HeaderNode(headerNodeOptions)
@@ -103,7 +104,7 @@ describe('HeaderNode', function() {
     await headerNode.connect()
     await headerNode.startSync()
 
-    await sleep(3000)
+    await sleep(500)
   })
 
   after(async () => {
@@ -148,7 +149,6 @@ mined on the network', async () => {
     // mine some blocks while header node is offline
     await generateBlocks(count, nclient, coinbase)
     await sleep(500)
-    // await sleep(1000)
 
     const tip = await nclient.execute('getblockcount')
 
@@ -166,7 +166,7 @@ mined on the network', async () => {
 
     // mine some blocks while header node is offline
     await generateBlocks(count, nclient, coinbase)
-    await sleep(500)
+    await sleep(250)
 
     let tip = await nclient.execute('getblockcount')
     headerTip = await headerNode.getTip()
@@ -184,7 +184,7 @@ mined on the network', async () => {
 
     // now check subscriptions are still working for new blocks
     await generateBlocks(count, nclient, coinbase)
-    await sleep(500)
+    await sleep(250)
     tip = await nclient.execute('getblockcount')
 
     headerTip = await headerNode.getTip()
