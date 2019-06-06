@@ -385,5 +385,5 @@ async function resetChain(node, start = 0, replay = true) {
   await node.startSync()
 
   // let indexer catch up
-  await sleep(500)
+  await sleep(750)
 }
