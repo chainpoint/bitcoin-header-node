@@ -23,8 +23,6 @@ async function initFullNode(options) {
     bip37: true,
     port: options.ports.full.p2p,
     httpPort: options.ports.full.node,
-    maxOutbound: 2,
-    seeds: [],
     memory: false,
     plugins: [require('bcoin/lib/wallet/plugin')],
     env: {

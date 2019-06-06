@@ -1,7 +1,7 @@
 'use strict'
 
 const assert = require('bsert')
-const { Chain, protocol, Miner, Headers, ChainEntry } = require('bcoin')
+const { Chain, protocol, Miner, Headers, ChainEntry, blockstore } = require('bcoin')
 
 const { sleep, setCustomCheckpoint } = require('./util/common')
 const HeaderIndexer = require('../lib/headerindexer')
@@ -9,8 +9,14 @@ const HeaderIndexer = require('../lib/headerindexer')
 const { Network } = protocol
 const network = Network.get('regtest')
 
+const blocks = new blockstore.LevelBlockStore({
+  memory: true,
+  network
+})
+
 const chain = new Chain({
   memory: true,
+  blocks,
   network
 })
 
@@ -24,8 +30,8 @@ miner.addresses.length = 0
 miner.addAddress('muhtvdmsnbQEPFuEmxcChX58fGvXaaUoVt')
 
 async function mineBlocks(count) {
-  assert(chain.opened)
-  assert(miner.opened)
+  assert(chain.opened, 'chain not open')
+  assert(miner.opened, 'miner not open')
 
   for (let i = 0; i < count; i++) {
     const block = await cpu.mineBlock()
@@ -38,10 +44,11 @@ describe('HeaderIndexer', () => {
   let indexer, options, count
 
   before(async () => {
-    options = { memory: true, chain }
+    options = { memory: true, chain, blocks }
     indexer = new HeaderIndexer(options)
     count = 10
 
+    await blocks.open()
     await chain.open()
     await miner.open()
     await indexer.open()

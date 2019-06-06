@@ -17,10 +17,11 @@
     "bhn": "./bin/bhn"
   },
   "dependencies": {
-    "bcoin": "bucko13/bcoin#expose-filter",
+    "bcoin": "bcoin-org/bcoin#0551096c0a0dae4ad8fb9f1e135b743d50a19983",
     "bcurl": "^0.1.6",
     "bdb": "^1.1.5",
     "bfile": "^0.2.0",
+    "bmutex": "^0.1.6",
     "bsert": "^0.0.9",
     "bufio": "^1.0.5",
     "bweb": "^0.1.8"
