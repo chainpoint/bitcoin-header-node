@@ -276,21 +276,6 @@ describe('HeaderIndexer', () => {
       failed = false
 
       try {
-        indexer.validateStartHeight(lastCheckpoint + 1)
-      } catch (e) {
-        failed = true
-        message = e.message
-      }
-
-      assert(failed, 'Expected validation to fail when passed a height higher than lastCheckpoint')
-      assert(
-        message.includes(lastCheckpoint.toString()) && message.includes('last checkpoint'),
-        'Should have failed with correct message'
-      )
-
-      failed = false
-
-      try {
         indexer.validateStartHeight(maxStart + 1)
       } catch (e) {
         failed = true
