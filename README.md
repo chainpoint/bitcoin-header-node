@@ -15,21 +15,21 @@
 A bcoin spv node is already very lightweight, around 160MB of chain data on mainnet as of block 568,134.
 However, it also stores some extra metadata with the headers. This helps for PoW verification but makes the
 headers a little heavier than the minimum [80 bytes per header](https://bitcoin.org/en/glossary/block-header)
-(in fact bcoin stores the [chainentry](https://github.com/bcoin-org/bcoin/blob/master/lib/blockchain/chainentry.js)
-primitive for spv sync rather than just the headers).
+(in fact bcoin stores a data structure internally called the [ChainEntry](https://github.com/bcoin-org/bcoin/blob/master/lib/blockchain/chainentry.js)
+for spv sync rather than just the headers).
 
-This Header Node implementation reduces the size of the data stored on disk for header syncing by using an in-memory
+This Bitcoin Header Node implementation reduces the size of the data stored on disk for header syncing by using an in-memory
 chain to sync with peers and a separate indexer database to store the headers. This brings the db size down to 76MB
-though further optimizations may be possible. The Header Indexer is based on a currently in progress feature
+though further optimizations may be possible. The Header Indexer is based on a new feature
 for bcoin that separtes out the indexers (Tx, Address, and Compact Filters) into their own databases and exposes
-utilities for custom indexers.
+utilities for creating your own custom indexers.
 
 ## Installation
 
 Configuration options are the same as with bcoin. See more information
 [here](https://github.com/bcoin-org/bcoin/blob/master/docs/configuration.md).
 
-Using from GitHub
+#### Using from GitHub
 
 ```bash
 $ git clone https://github.com/chainpoint/headernode
@@ -38,27 +38,92 @@ $ yarn install
 $ ./bin/bhn
 ```
 
-Mainnet should take between 1-2 hours for initial sync.
+Mainnet should take between 1-2 hours for initial sync from genesis, less with a custom start height
+
+#### You can also install from npm
+
+```bash
+$ npm install -g bhn
+$ bhn [...options]
+```
+
+#### Or use it as a library
+
+```javascript
+const BHN = require('bhn')
+
+async function startNode(config) {
+  let node = new BHN({
+    // node options
+    network: config.str('network'),
+    memory: config.bool('memory', false),
+    prefix: config.getPrefix(),
+    logLevel: config.str('log-level', 'info'),
+    // indexer options
+    startTip: config.array('start-tip'),
+    startHeight: config.int('start-height'),
+    // pool options
+    proxy: config.str('proxy'),
+    onion: config.bool('onion'),
+    upnp: config.bool('upnp'),
+    seeds: config.array('seeds'),
+    nodes: config.array('nodes'),
+    listen: false,
+    // http options
+    ssl: config.bool('ssl'),
+    keyFile: config.path('ssl-key'),
+    certFile: config.path('ssl-cert'),
+    host: config.str('http-host'),
+    port: config.uint('http-port'),
+    apiKey: config.str('api-key'),
+    noAuth: config.bool('no-auth'),
+    cors: config.bool('cors')
+  })
+
+  process.on('unhandledRejection', err => {
+    throw err
+  })
+
+  process.on('SIGINT', async () => {
+    if (node && node.opened) await node.close()
+    process.exit()
+  })
+
+  try {
+    await node.ensure()
+    await node.open()
+    await node.connect()
+    await node.startSync()
+  } catch (e) {
+    console.error(e.stack)
+    process.exit(1)
+  }
+
+  return node
+}
+```
 
 ## `Fast Sync` with a custom start block
 
 ### About Custom Start Blocks
 
 Header Node supports the ability to start syncing from a custom start height rather than syncing a
-new header chain from scratch. This can have the advantage of saving space and sync time if you don't need the full history
-of previous headers.
+new header chain from scratch. This can have the advantage of saving space and sync time if you don't
+need the full history of previous headers.
 
 This can be a little tricky however since a blockchain by its nature relies on the fact of an unbroken chain
 of history connected by hashes going back to the Genesis Block. **Make sure that you trust the block
-data you are starting with**. Even if you have an incorrect start block however, unless you're connecting to malicious peers,
-the sync will just fail.
+data you are starting with**. Even if you have an incorrect start block however, unless you're connecting
+to and
+[eclipsed by malicious peers](https://bitcoin.stackexchange.com/questions/61151/eclipse-attack-vs-sybil-attack#61154),
+the sync should just fail.
 
 ### Usage
 
 You need to tell your node you want to start with a custom start point. There are two ways to do this on mainnet: with
 the start height or with the raw header data for the start block and _its previous block_ (this is needed for contextual checks).
-For other networks, including testnet or regtest, only the raw data will work since the height functionality works by querying
-the [btc.com](https://btc.com) API for the target blocks (you can see how this works in the bhn tests for startTip).
+For a contained testing network like regtest or simnet, only the raw data will work since the height functionality works by querying the [blockcypher.com](https://blockcypher.com) API for the target blocks
+(you can see how to set the raw block data in the bhn tests for startTip).
 
 Both options, `start-tip` or `start-height`, can be passed as with any
 [bcoin Configuration](https://github.com/bcoin-org/bcoin/blob/master/docs/configuration.md).
@@ -69,20 +134,23 @@ For example, to start from block 337022, you can pass in the following at runtim
 $ ./bin/bhn --start-height=337022
 ```
 
-Alternatively, adding it to a bcoin.conf configuration file in your node's prefix directory or as an environment variable `BCOIN_START_HEIGHT`
-will also work. For a start-tip, you must pass in an array of two raw block headers.
+Alternatively, adding it to a bcoin.conf configuration file in your node's prefix directory or as an
+environment variable `BCOIN_START_HEIGHT` will also work. For a start-tip, you must pass in an
+array of two raw block headers.
 
 ## Header Node Client
 
 The Header Node comes with a built-in HTTP server that includes both a REST API and RPC interface (on the backend it uses an
 extended instance of the [bweb](https://github.org/bcoin-org/bweb) object used in bcoin)
-You can use the `bclient` package to interact with your header node, either installed as a global package with npm and used via CLI
-or used directly in a script. Authentication is also supported on the node. A client that wishes to connect will need
-an API key if this is enabled.
+You can use the `bclient` package to interact with your header node, either installed as a global
+package with npm and used via CLI or used directly in a script. Authentication is also supported on the node.
+A client that wishes to connect will need an API key if this is enabled.
 
 (Read the [bcoin API docs](http://bcoin.io/api-docs/index.html) for more information on installing and setting up a client).
 
-### Endpoints
+### New Endpoints
+
+All useses of `client` are references to the `bclient` package, [available on npm](https://www.npmjs.com/package/bclient).
 
 #### GET /block/:height
 
@@ -146,13 +214,14 @@ The RPC interface is also available
 
 #### `getblockheader`
 
-NOTE: The api is the same as for normal bcoin/bitcoin nodes. However, when using against a header node,
-this will only work on recent blocks. Since the bhn indexer only indexes by height and all other chain
-data is saved in memory, older blocks will not be found. Use `getheaderbyheight` method above instead when possible
+NOTE: The api is the same as for normal bcoin/bitcoin nodes and takes the block hash as input.
+However, when using against a header node, this will only work on recent blocks. Since the bhn indexer
+only indexes by height and all other chain data is saved in memory, older blocks will not be found.
+Use `getheaderbyheight` method above instead when possible
 
 ## Testing
 
-There are tests for the header indexer and the header node.
+Tests are available and can be run with the following command:
 
 ```bash
 $ yarn test
@@ -168,11 +237,11 @@ $ yarn test
   and add these to the chain db so that they are available for these operations.
 
 - The HeaderIndexer takes the place of the chain in several places for the Header Node to avoid some of this
-  reliance on the chain which we are not persisting. The custom `HeaderPool` is extended from bcoin's default `Pool` object
+  reliance on the chain that is not persisted. The custom `HeaderPool` is extended from bcoin's default `Pool` object
   to replace calls to methods normally done by the chain that won't work given that there is no chain (or in the case
-  of a custom start point, not even a proper genesis block). The best example is `getLocator` which normally gets block hashes
-  all the way back to genesis on the chain, but in our case will run the checks on the header index, and stop early if using
-  a custom start point.
+  of a custom start point, not even a proper genesis block). The best example is `getLocator` which
+  normally gets block hashes all the way back to genesis on the chain, but in our case will run
+  the checks on the header index, and stop early if using a custom start point.
 
 - In the unlikely case that you are using a header node on regtest or simnet (such as in the unit tests),
   it is not recommended to use a custom start height. The reason is that there are some different PoW checks that are done
@@ -180,24 +249,14 @@ $ yarn test
   starting your node _after_ the lastCheckpoint (which is zero for regtest/simnet), the chain will search backwards for old blocks
   to confirm proof of work even if not in a new retargeting interval. Start height initialization will typically account for this
   on testnet and mainnet for example, but since regtest does not have a lastCheckpoint, this can make behavior a little weird.
-  For the tests, to confirm that the start height functionality works with checkpoints, we adjust the retarget interval down and
+  For the tests, to confirm that the start height functionality works with checkpoints, we adjust the retarget interval down in some cases and
   set a custom lastCheckpoint rather than having to mine over 2k blocks which would slow the tests down.
 
 ## TODO:
 
-- [x] Add HTTP and RPC support for retrieving headers with a bcoin compatible client
-- [x] Add support to start syncing from a _known_ and _trusted_ header checkpoint (this should speed up
-      initial sync and reduce db size further)
-- [x] Try and get rid of the locator error in `net` (can be fixed if `getLocator` returns array of just start hash)
 - [ ] Investigate other performance improvements such as [compressed headers](https://github.com/RCasatta/compressedheaders)
-- [x] A header chain with custom start point currently can't handle a chain db reset.
-      This should be made more robust, even if just throwing an error.
-      This weakness can be demonstrated in the fast sync test for headernode,
-      where the chain is reset. Reset chain db to 0 and the method will throw
-      because it can't rewind the chain properly.
 - [ ] Fix or avoid tedious process of re-initializing chain from headers index when past lastCheckpoint
-- [x] Non-deterministic problem where the node gets caught in an infinite loop resolving orphans
-      after having synced to tip and the node restarts.
+- [ ] Add support for later start heights, after lastCheckpoint.
 
 ## License
 
