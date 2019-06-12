@@ -4,9 +4,9 @@
 
 process.title = 'bhn';
 
-const HeaderNode = require('../lib/headernode');
+const BHN = require('../lib/headernode');
 
-const node = new HeaderNode({
+const node = new BHN({
   file: true,
   argv: true,
   env: true,

@@ -54,30 +54,8 @@ const BHN = require('bhn')
 
 async function startNode(config) {
   let node = new BHN({
-    // node options
-    network: config.str('network'),
-    memory: config.bool('memory', false),
-    prefix: config.getPrefix(),
-    logLevel: config.str('log-level', 'info'),
-    // indexer options
-    startTip: config.array('start-tip'),
-    startHeight: config.int('start-height'),
-    // pool options
-    proxy: config.str('proxy'),
-    onion: config.bool('onion'),
-    upnp: config.bool('upnp'),
-    seeds: config.array('seeds'),
-    nodes: config.array('nodes'),
-    listen: false,
-    // http options
-    ssl: config.bool('ssl'),
-    keyFile: config.path('ssl-key'),
-    certFile: config.path('ssl-cert'),
-    host: config.str('http-host'),
-    port: config.uint('http-port'),
-    apiKey: config.str('api-key'),
-    noAuth: config.bool('no-auth'),
-    cors: config.bool('cors')
+    network: 'testnet',
+    startHeight: 1045000
   })
 
   process.on('unhandledRejection', err => {
@@ -88,6 +66,9 @@ async function startNode(config) {
     if (node && node.opened) await node.close()
     process.exit()
   })
+
+  // you can even set event listeners!
+  node.on('connect', entry => console.log('new block connected!:', entry))
 
   try {
     await node.ensure()
@@ -103,6 +84,14 @@ async function startNode(config) {
 }
 ```
 
+## Configuration
+
+Since BHN is just an extension of a normal bcoin full node, configuration works the same as well.
+You can add config options to a config file `bhn.conf`, which by default is searched for in the `~/.bhn`
+prefix data dir. Command line args and env vars, prefixed with `BHN_` are also supported.
+
+Read more at the [bcoin Configuration docs](https://github.com/bcoin-org/bcoin/blob/master/docs/configuration.md).
+
 ## `Fast Sync` with a custom start block
 
 ### About Custom Start Blocks
@@ -116,14 +105,16 @@ of history connected by hashes going back to the Genesis Block. **Make sure that
 data you are starting with**. Even if you have an incorrect start block however, unless you're connecting
 to and
 [eclipsed by malicious peers](https://bitcoin.stackexchange.com/questions/61151/eclipse-attack-vs-sybil-attack#61154),
-the sync should just fail.
+the sync should just fail with a bad starting block.
 
 ### Usage
 
-You need to tell your node you want to start with a custom start point. There are two ways to do this on mainnet: with
-the start height or with the raw header data for the start block and _its previous block_ (this is needed for contextual checks).
-For a contained testing network like regtest or simnet, only the raw data will work since the height functionality works by querying the [blockcypher.com](https://blockcypher.com) API for the target blocks
-(you can see how to set the raw block data in the bhn tests for startTip).
+You need to tell your node you want to start with a custom start point. There are two ways to do this on
+mainnet and testnet: with the start height or with the raw header data for the start block and
+_its previous block_ (this is needed for contextual checks). For a contained testing network like regtest or simnet,
+only the raw data will work since the height functionality works by querying the
+[blockcypher.com](https://blockcypher.com) API for the target blocks (you can see how to set the raw
+block data in the bhn tests for startTip).
 
 Both options, `start-tip` or `start-height`, can be passed as with any
 [bcoin Configuration](https://github.com/bcoin-org/bcoin/blob/master/docs/configuration.md).
@@ -136,7 +127,7 @@ $ ./bin/bhn --start-height=337022
 
 Alternatively, adding it to a bcoin.conf configuration file in your node's prefix directory or as an
 environment variable `BCOIN_START_HEIGHT` will also work. For a start-tip, you must pass in an
-array of two raw block headers.
+array of two raw (i.e. Buffers) block headers.
 
 ## Header Node Client
 
@@ -150,7 +141,9 @@ A client that wishes to connect will need an API key if this is enabled.
 
 ### New Endpoints
 
-All useses of `client` are references to the `bclient` package, [available on npm](https://www.npmjs.com/package/bclient).
+All instances of `client` in the following examples are references to the `bclient` package,
+[available on npm](https://www.npmjs.com/package/bclient). Read more about using bclient
+[here](http://bcoin.io/api-docs/index.html#configuring-clients).
 
 #### GET /block/:height
 
@@ -209,6 +202,59 @@ The RPC interface is also available
   "chainwork": "00000000000000000000000000000000000000000036fb5c7c89f1a9eedb191c",
   "previousblockhash": "0000000000000000024c4a35f0485bab79ce341cdd5cc6b15186d9b5b57bf3da",
   "nextblockhash": null
+}
+```
+
+#### `getstartheader` and `getStart`
+
+This endpoint is for getting the header of the starting block for when you have a custom
+start height set. Useful for when you need to check how far back you can get headers for.
+
+```js
+;(async () => {
+  await client.execute('getstartheader')
+})()
+```
+
+For a node that started on block 337022, the rpc will return:
+
+```json
+{
+  "hash": "00000000000000001324bcae72265c48b69328266afffe0d4a526ca400942550",
+  "confirmations": 243410,
+  "height": 337022,
+  "version": 2,
+  "versionHex": "00000002",
+  "merkleroot": "63fec4d1079d12855590ddd99b5a94035fd6a30fcbe8581be7ed862fa7582ae2",
+  "time": 1420156149,
+  "mediantime": 1420156149,
+  "bits": 404426186,
+  "difficulty": 40640955016.57649,
+  "previousblockhash": "00000000000000001591acd927bff8a122aeb6fea74cb7aff3ba535fa431a3c2",
+  "nextblockhash": "00000000000000000b2622fab43b722df811c28b64005c82f56285a46aa9605c"
+}
+```
+
+or...
+
+```js
+;(async () => {
+  await client.get('/start')
+})()
+```
+
+returns...
+
+```json
+{
+  "hash": "00000000000000001324bcae72265c48b69328266afffe0d4a526ca400942550",
+  "height": 337022,
+  "version": 2,
+  "prevBlock": "00000000000000001591acd927bff8a122aeb6fea74cb7aff3ba535fa431a3c2",
+  "merkleRoot": "63fec4d1079d12855590ddd99b5a94035fd6a30fcbe8581be7ed862fa7582ae2",
+  "time": 1420156149,
+  "bits": 404426186,
+  "nonce": 2449800613
 }
 ```
 
