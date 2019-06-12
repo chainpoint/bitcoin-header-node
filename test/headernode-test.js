@@ -365,6 +365,41 @@ describe('HeaderNode', function() {
 
       assert.equal(revHex(entry.hash), revHex(ChainEntry.fromRaw(tip).hash))
     })
+
+    it('should be able to get a start height', async () => {
+      const startHeight = 10
+      headerNode.headerindex.startHeight = startHeight
+      const header = await headerNode.headerindex.getEntry(startHeight)
+      const next = await headerNode.headerindex.getEntry(startHeight + 1)
+      const httpStartHeader = await client.get('/start')
+
+      assert(httpStartHeader, 'Could not get header by height with http')
+      assert.equal(
+        httpStartHeader.merkleRoot,
+        revHex(header.merkleRoot),
+        'Expected merkle root returned by server to match with one from header node'
+      )
+      assert.equal(
+        httpStartHeader.height,
+        startHeight,
+        `RPC came back with a header not at the start height ${startHeight}`
+      )
+
+      // rpc
+      const rpcStartHeader = await client.execute('getstartheader')
+      assert(rpcStartHeader, 'Could not get block by height with rpc')
+      assert.equal(
+        rpcStartHeader.height,
+        startHeight,
+        `RPC came back with a header not at the start height ${startHeight}`
+      )
+      assert.equal(
+        rpcStartHeader.merkleroot,
+        revHex(header.merkleRoot),
+        'Expected merkle root returned by rpc server to match with one from header node'
+      )
+      assert.equal(revHex(next.hash), rpcStartHeader.nextblockhash, `next block hash did not match for start header`)
+    })
   })
 })
 

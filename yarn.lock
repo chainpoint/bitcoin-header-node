@@ -298,9 +298,9 @@ bclient@~0.1.7:
     bcurl "~0.1.6"
     bsert "~0.0.10"
 
-bcoin@bcoin-org/bcoin#0551096c0a0dae4ad8fb9f1e135b743d50a19983:
+bcoin@bcoin-org/bcoin#f00985fefb3984330a5a1e42782f708369407257:
   version "1.0.2"
-  resolved "https://codeload.github.com/bcoin-org/bcoin/tar.gz/0551096c0a0dae4ad8fb9f1e135b743d50a19983"
+  resolved "https://codeload.github.com/bcoin-org/bcoin/tar.gz/f00985fefb3984330a5a1e42782f708369407257"
   dependencies:
     bcfg "~0.1.6"
     bclient "~0.1.7"
