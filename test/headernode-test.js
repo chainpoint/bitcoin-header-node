@@ -239,17 +239,17 @@ describe('HeaderNode', function() {
     // starting block must less than lastCheckpoint and less than or equal to a retargeting interval
     // this sets the starting height to the last retargeting interval before the lastCheckpoint
     const startHeight = checkpointEntry.height - (checkpointEntry.height % retargetInterval) - 1
-    const startTip = []
+    const startBlock = []
     let entry = await node.chain.getEntryByHeight(startHeight)
-    startTip.push(entry.toRaw('hex'))
+    startBlock.push(entry.toRaw('hex'))
     entry = await node.chain.getEntryByHeight(startHeight + 1)
-    startTip.push(entry.toRaw('hex'))
+    startBlock.push(entry.toRaw('hex'))
 
     const options = {
       ...headerNodeOptions,
       port: ports.header.p2p + 10,
       httpPort: ports.header.node + 10,
-      startTip: startTip,
+      startBlock: startBlock,
       memory: true
     }
 
@@ -270,9 +270,9 @@ describe('HeaderNode', function() {
 
     // let's just test that it can reconnect
     // after losing its in-memory chain
-    const startTipHeight = ChainEntry.fromRaw(startTip[1]).height
+    const startBlockHeight = ChainEntry.fromRaw(startBlock[1]).height
     await fastNode.disconnect()
-    await resetChain(fastNode, startTipHeight + 1)
+    await resetChain(fastNode, startBlockHeight + 1)
 
     const tip = await nclient.execute('getblockcount')
     const fastTip = await fastNode.getTip()

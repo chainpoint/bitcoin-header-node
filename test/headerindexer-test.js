@@ -153,7 +153,7 @@ describe('HeaderIndexer', () => {
     })
   })
 
-  describe('startTip', () => {
+  describe('startBlock', () => {
     let startHeight, prevEntry, startEntry, checkpointHeight, newIndexer
     beforeEach(async () => {
       startHeight = 10
@@ -169,7 +169,7 @@ describe('HeaderIndexer', () => {
       }
     })
 
-    it('should throw if a startTip is between last retarget height and last checkpoint', async () => {
+    it('should throw if a startBlock is between last retarget height and last checkpoint', async () => {
       const {
         pow: { retargetInterval }
       } = indexer.network
@@ -189,7 +189,7 @@ describe('HeaderIndexer', () => {
       // the serialization and the height. The height should be after last retarget and before lastCheckpoint
       prevEntryCopy.height = maxStart + 1
       startEntryCopy.height = maxStart + 2
-      const newOptions = { ...options, startTip: [prevEntryCopy.toRaw(), startEntryCopy.toRaw()] }
+      const newOptions = { ...options, startBlock: [prevEntryCopy.toRaw(), startEntryCopy.toRaw()] }
 
       let failed = false
       let message
@@ -291,31 +291,31 @@ describe('HeaderIndexer', () => {
       )
     })
 
-    it('should be able to set and get a startTip', async () => {
-      // setting a custom checkpoint so we can set the startTip without throwing an error
+    it('should be able to set and get a startBlock', async () => {
+      // setting a custom checkpoint so we can set the startBlock without throwing an error
       // hash (third arg) can be arbitrary for the purposes of this test
       // since a change on one indexer affects all instances that share the same bcoin, module
       // this will serve for creating a new test indexer later in the test
       setCustomCheckpoint(indexer, checkpointHeight, startEntry.hash)
 
-      const newOptions = { ...options, startTip: [prevEntry.toRaw(), startEntry.toRaw()], logLevel: 'error' }
+      const newOptions = { ...options, startBlock: [prevEntry.toRaw(), startEntry.toRaw()], logLevel: 'error' }
       const newIndexer = new HeaderIndexer(newOptions)
-      await newIndexer.setStartTip()
-      const [actualPrev, actualStart] = newIndexer.startTip
+      await newIndexer.setStartBlock()
+      const [actualPrev, actualStart] = newIndexer.startBlock
 
       assert.equal(ChainEntry.fromRaw(actualPrev).rhash(), prevEntry.rhash(), "prevEntries for tip didn't match")
       assert.equal(ChainEntry.fromRaw(actualStart).rhash(), startEntry.rhash(), "startEntries for tip didn't match")
       await newIndexer.open()
-      const [dbPrev, dbStart] = await newIndexer.getStartTip()
+      const [dbPrev, dbStart] = await newIndexer.getStartBlock()
       assert.equal(ChainEntry.fromRaw(dbPrev).rhash(), prevEntry.rhash(), "prevEntries for tip from db didn't match")
       assert.equal(ChainEntry.fromRaw(dbStart).rhash(), startEntry.rhash(), "startEntries for tip from db didn't match")
     })
 
-    it('should return null for getStartTip when none is set', async () => {
+    it('should return null for getStartBlock when none is set', async () => {
       newIndexer = new HeaderIndexer(options)
       await newIndexer.db.open()
-      const startTip = await newIndexer.getStartTip()
-      assert.equal(startTip, null, 'Expected startTip to be null when none was passed')
+      const startBlock = await newIndexer.getStartBlock()
+      assert.equal(startBlock, null, 'Expected startBlock to be null when none was passed')
     })
   })
 
