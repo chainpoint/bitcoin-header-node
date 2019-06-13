@@ -113,7 +113,7 @@ You need to tell your node you want to start with a custom start point. There ar
 mainnet and testnet: with the start height or with the raw header data for the start block and
 _its previous block_ (this is needed for contextual checks). These should be put in order,
 block at index 0 in the array should be the prev block, and the last block in the array (index 1) will be
-saved as the actual starting tip.
+saved as the actual starting block.
 
 For a contained testing network like regtest or simnet, only the raw data will work since the
 height functionality works by querying the [blockcypher.com](https://blockcypher.com) API for the
