@@ -113,13 +113,13 @@ You need to tell your node you want to start with a custom start point. There ar
 mainnet and testnet: with the start height or with the raw header data for the start block and
 _its previous block_ (this is needed for contextual checks). These should be put in order,
 block at index 0 in the array should be the prev block, and the last block in the array (index 1) will be
-saved as the actual starting tip.
+saved as the actual starting block.
 
 For a contained testing network like regtest or simnet, only the raw data will work since the
 height functionality works by querying the [blockcypher.com](https://blockcypher.com) API for the
-target blocks (you can see how to set the raw block data in the bhn tests for startTip).
+target blocks (you can see how to set the raw block data in the bhn tests for startBlock).
 
-Both options, `start-tip` or `start-height`, can be passed as with any
+Both options, `start-block` or `start-height`, can be passed as with any
 [bcoin Configuration](https://github.com/bcoin-org/bcoin/blob/master/docs/configuration.md).
 
 For example, to start from block 337022, you can pass in the following at runtime:
@@ -129,7 +129,7 @@ $ ./bin/bhn --start-height=337022
 ```
 
 Alternatively, adding it to a bcoin.conf configuration file in your node's prefix directory or as an
-environment variable `BCOIN_START_HEIGHT` will also work. For a start-tip, you must pass in an
+environment variable `BCOIN_START_HEIGHT` will also work. For a start-block, you must pass in an
 array of two raw block headers (i.e. as Buffers).
 
 ## Header Node Client
