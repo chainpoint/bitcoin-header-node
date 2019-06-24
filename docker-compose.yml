@@ -1,6 +1,6 @@
 version: '3'
 services:
-  headernode:
+  bhn:
     build: .
     environment:
       BCOIN_HTTP_HOST: 0.0.0.0
