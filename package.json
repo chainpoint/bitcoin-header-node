@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "Bitcoin Header Node- A lightweight node for syncing only bitcoin block headers from a specific height",
   "main": "lib/index.js",
-  "repository": "git://github.com/chainpoint/headernode.git",
+  "repository": "git://github.com/chainpoint/bitcoin-header-node.git",
   "scripts": {
     "coverage": "nyc report --reporter=text-lcov | coveralls",
     "lint": "eslint lib/*.js test/*.js",

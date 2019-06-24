@@ -29,7 +29,7 @@ COPY --from=build /code /code/
 
 # start the header node. Can pass additional options with
 # CMD in docker-compose or from command line with `docker run`
-ENTRYPOINT ["headernode"]
+ENTRYPOINT ["bhn"]
 
 # Main-net and Test-net
 EXPOSE 8334 8333 8332 18334 18333 18332

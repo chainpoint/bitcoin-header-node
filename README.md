@@ -1,10 +1,10 @@
 [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Build Status](https://travis-ci.org/chainpoint/headernode.svg?branch=master)](https://travis-ci.com/chainpoint/headernode)
-[![Coverage Status](https://coveralls.io/repos/github/chainpoint/headernode/badge.svg?t=bfNhA9)](https://coveralls.io/github/chainpoint/headernode)
+[![Build Status](https://travis-ci.org/chainpoint/bitcoin-header-node.svg?branch=master)](https://travis-ci.com/chainpoint/bitcoin-header-node)
+[![Coverage Status](https://coveralls.io/repos/github/chainpoint/bitcoin-header-node/badge.svg?branch=master)](https://coveralls.io/github/chainpoint/bitcoin-header-node?branch=master)
 
-<!---[![npm](https://img.shields.io/npm/l/chainpoint-cli.svg)](https://www.npmjs.com/package/headernode)
-[![npm](https://img.shields.io/npm/v/chainpoint-cli.svg)](https://www.npmjs.com/package/headernode)-->
+<!---[![npm](https://img.shields.io/npm/l/chainpoint-cli.svg)](https://www.npmjs.com/package/bhn)
+[![npm](https://img.shields.io/npm/v/chainpoint-cli.svg)](https://www.npmjs.com/package/bhn)-->
 
 # Bitcoin Header Node
 
@@ -32,8 +32,8 @@ Configuration options are the same as with bcoin. See more information
 #### Using from GitHub
 
 ```bash
-$ git clone https://github.com/chainpoint/headernode
-$ cd headernode
+$ git clone https://github.com/chainpoint/bitcoin-header-node
+$ cd bitcoin-header-node
 $ yarn install
 $ ./bin/bhn
 ```
