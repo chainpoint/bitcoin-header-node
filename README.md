@@ -29,6 +29,19 @@ utilities for creating your own custom indexers.
 Configuration options are the same as with bcoin. See more information
 [here](https://github.com/bcoin-org/bcoin/blob/master/docs/configuration.md).
 
+### System Requirements:
+
+- Linux, OSX, or Windows (\*)
+- node.js >= v11.12.0
+- npm >= v6.4.1
+- python2 (for node-gyp)
+- gcc/g++ (for leveldb and secp256k1)
+
+If running on a fresh VPS with Ubuntu, you can run `sudo apt-get install build-essential` to
+get the necessary build tools and then run the following commands.
+
+(\*): Note that bhn works best with unix-like OSes, and has not yet been thoroughly tested on Windows.
+
 #### Using from GitHub
 
 ```bash
