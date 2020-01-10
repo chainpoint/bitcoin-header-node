@@ -17,9 +17,10 @@
     "bhn": "./bin/bhn"
   },
   "dependencies": {
-    "bcoin": "bcoin-org/bcoin#f00985fefb3984330a5a1e42782f708369407257",
+    "bclient": "^0.1.7",
+    "bcoin": "bcoin-org/bcoin",
     "bcurl": "^0.1.6",
-    "bdb": "^1.1.5",
+    "bdb": "^1.1.7",
     "bfile": "^0.2.0",
     "bmutex": "^0.1.6",
     "bsert": "^0.0.9",
